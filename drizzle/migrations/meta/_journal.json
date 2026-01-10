@@ -15,6 +15,13 @@
       "when": 1768052042227,
       "tag": "0001_tan_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1768066914412,
+      "tag": "0002_sharp_dragon_man",
+      "breakpoints": true
     }
   ]
 }
