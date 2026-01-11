@@ -4,6 +4,8 @@ import { DrizzleModule } from './db/drizzle.module';
 import { UsersModule } from './users/users.module';
 import { ChatGateway } from './gateways/chat.gateway';
 import { JwtModule } from '@nestjs/jwt';
+import { CategoriesModule } from './categories/categories.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { JwtModule } from '@nestjs/jwt';
     }),
     DrizzleModule,
     UsersModule,
+    CategoriesModule,
+    ProductsModule,
   ],
   providers: [ChatGateway],
 })
