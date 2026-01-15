@@ -7,6 +7,6 @@ import { DrizzleModule } from '../db/drizzle.module';
   imports: [DrizzleModule],
   controllers: [ProductsController],
   providers: [ProductsService],
-  exports: [ProductsService], 
+  exports: [ProductsService],
 })
 export class ProductsModule {}

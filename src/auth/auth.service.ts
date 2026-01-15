@@ -5,7 +5,7 @@ import { compare, hash } from 'bcrypt';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
 import { users, refreshTokens } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, isNull } from 'drizzle-orm';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { InferSelectModel } from 'drizzle-orm';
@@ -21,7 +21,7 @@ export class AuthService {
     @Inject('DRIZZLE') private readonly db: NodePgDatabase<typeof schema>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async register(data: RegisterDto): Promise<{ user: Partial<User>; accessToken: string }> {
     const existing = await this.db
@@ -48,10 +48,11 @@ export class AuthService {
       })
       .returning();
 
-    const accessToken = this.jwtService.sign(
-      { sub: newUser.id, email: newUser.email, type: newUser.type },
-      { expiresIn: '1d' },
-    );
+    const accessToken = this.jwtService.sign({
+      sub: newUser.id,
+      email: newUser.email,
+      type: newUser.type,
+    });
 
     return {
       user: { id: newUser.id, email: newUser.email, name: newUser.name, type: newUser.type },
@@ -84,13 +85,16 @@ export class AuthService {
 
     const refreshToken = this.jwtService.sign(
       { sub: foundUser.id },
-      { expiresIn: '30d' },
+      {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        expiresIn: '30d',
+      },
     );
 
-    await this.db.insert(refreshTokens).values({
+    await this.db.insert(refreshTokens).values({  
       userId: foundUser.id,
       token: refreshToken,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
     return { accessToken, refreshToken };
@@ -100,31 +104,33 @@ export class AuthService {
     let payload: any;
     try {
       payload = this.jwtService.verify(refreshToken, {
-        secret: this.configService.get('JWT_REFRESH_SECRET'),
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       });
-    } catch {
-      throw new UnauthorizedException('Refresh token inválido');
+    } catch (e) {
+      throw new UnauthorizedException('Refresh token inválido ou expirado');
     }
 
-    const storedToken = await this.db
+    const stored = await this.db
       .select()
       .from(refreshTokens)
       .where(
         and(
           eq(refreshTokens.token, refreshToken),
           eq(refreshTokens.userId, payload.sub),
+          isNull(refreshTokens.revokedAt),
         ),
       )
       .limit(1);
 
-    if (storedToken.length === 0) {
-      throw new UnauthorizedException('Refresh token inválido');
+    if (stored.length === 0) {
+      throw new UnauthorizedException('Refresh token inválido ou revogado');
     }
 
-    const accessToken = this.jwtService.sign(
-      { sub: payload.sub, email: payload.email, type: payload.type },
-      { expiresIn: '1d' },
-    );
+    const accessToken = this.jwtService.sign({
+      sub: payload.sub,
+      email: payload.email,
+      type: payload.type,
+    });
 
     return { accessToken };
   }
@@ -171,7 +177,6 @@ export class AuthService {
       { expiresIn: '1h' },
     );
 
-   
     return { message: 'Link de recuperação enviado para o e-mail' };
   }
 
