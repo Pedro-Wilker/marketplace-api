@@ -14,10 +14,18 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-export const userTypeEnum = pgEnum('user_type', ['customer', 'merchant', 'professional', 'admin']);
+export const userTypeEnum = pgEnum('user_type', [
+  'customer',
+  'merchant',
+  'professional',
+  'prefecture',
+  'admin' 
+]);
 export const orderStatusEnum = pgEnum('order_status', ['pending', 'confirmed', 'preparing', 'delivered', 'cancelled']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'refunded']);
 export const priceTypeEnum = pgEnum('price_type', ['fixed', 'hourly', 'negotiable']);
+
+
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -54,6 +62,27 @@ export const professionalProfiles = pgTable('professional_profiles', {
   categories: text('categories').array(), 
   serviceRadiusKm: integer('service_radius_km'),
   portfolio: jsonb('portfolio'), 
+});
+
+export const prefectureProfiles = pgTable('prefecture_profiles', {
+  userId: uuid('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  officialName: text('official_name').notNull(), 
+  cnpj: text('cnpj').notNull(),
+  addressStreet: text('address_street').notNull(),
+  addressNumber: text('address_number'),
+  addressNeighborhood: text('address_neighborhood').notNull(),
+  addressCity: text('address_city').notNull(),
+  addressState: text('address_state').notNull(),
+  addressZipCode: text('address_zip_code').notNull(),
+  location: text('location'),
+  officialWebsite: text('official_website'),
+  mainPhone: text('main_phone'),
+  institutionalEmail: text('institutional_email'),
+  responsibleName: text('responsible_name'),
+  responsiblePosition: text('responsible_position'),
+  status: text('status').$type<'pending' | 'approved' | 'rejected'>().default('pending'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const categories = pgTable('categories', {
