@@ -91,7 +91,7 @@ export class AuthService {
       },
     );
 
-    await this.db.insert(refreshTokens).values({
+    await this.db.insert(refreshTokens).values({  
       userId: foundUser.id,
       token: refreshToken,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
