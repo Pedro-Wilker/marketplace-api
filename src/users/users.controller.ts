@@ -8,13 +8,17 @@ import {
   Delete,
   NotFoundException,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { CreateMerchantDto } from './dto/create-merchant.dto';
+import { BecomePrefectureDto } from './dto/become-prefecture.dto';
+import { BecomeProfessionalDto } from './dto/become-professional.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get('test')
   async testConnection() {
@@ -65,5 +69,25 @@ export class UsersController {
       throw new NotFoundException('Usuário não encontrado');
     }
     return { message: 'Usuário removido com sucesso' };
+  }
+
+  @Post('become-merchant')
+  @UseGuards(JwtAuthGuard)
+  async becomeMerchant(@Req() req, @Body() data: unknown) {
+    const parsed = CreateMerchantDto.parse(data);
+    return this.usersService.becomeMerchant(req.user.sub, parsed);
+  }
+
+  @Post('become-prefecture')
+  @UseGuards(JwtAuthGuard)
+  async becomePrefecture(@Req() req, @Body() body: unknown) {
+    const data = BecomePrefectureDto.parse(body);
+    return this.usersService.becomePrefecture(req.user.sub, data);
+  }
+  @Post('become-professional')
+  @UseGuards(JwtAuthGuard)
+  async becomeProfessional(@Req() req, @Body() body: unknown) {
+    const data = BecomeProfessionalDto.parse(body);
+    return this.usersService.becomeProfessional(req.user.sub, data);
   }
 }
