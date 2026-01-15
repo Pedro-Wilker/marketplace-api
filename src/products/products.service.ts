@@ -23,8 +23,8 @@ export class ProductsService {
         limit = 50,
         offset = 0,
     ): Promise<Product[]> {
-        
-        const conditions: SQL<unknown>[] = [];  
+
+        const conditions: SQL<unknown>[] = [];
 
         if (filters?.merchantId) {
             conditions.push(eq(products.merchantId, filters.merchantId));
@@ -56,7 +56,10 @@ export class ProductsService {
     async create(data: NewProduct): Promise<Product> {
         const [newProduct] = await this.db
             .insert(products)
-            .values(data)
+            .values({
+                ...data,
+                images: data.images || [], 
+            })
             .returning();
 
         if (!newProduct) {
@@ -79,7 +82,6 @@ export class ProductsService {
     async remove(id: string): Promise<boolean> {
         const result = await this.db.delete(products).where(eq(products.id, id));
 
-        // result.rowCount pode ser undefined em alguns casos; safe check
         return (result.rowCount ?? 0) > 0;
     }
 

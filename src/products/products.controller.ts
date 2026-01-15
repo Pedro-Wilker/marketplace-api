@@ -9,17 +9,23 @@ import {
   NotFoundException,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ProductOwnershipGuard } from 'src/auth/guards/ownership.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { UploadService } from '../upload/upload.service';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) { }
+  constructor(private readonly productsService: ProductsService,
+    private readonly uploadService: UploadService,
+  ) { }
 
   @Get()
   async findAll(
@@ -48,7 +54,15 @@ export class ProductsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('merchant')
-  async create(@Body() createProductDto: any) {
+  @UseInterceptors(FilesInterceptor('images', 30))
+  async create(@Body() createProductDto: any, @UploadedFiles() files: Express.Multer.File[],) {
+    const imageUrls = await this.uploadService.uploadMultipleImages(files);
+
+    const data = {
+      ...createProductDto,
+      images: imageUrls,
+    };
+
 
     return this.productsService.create(createProductDto);
   }

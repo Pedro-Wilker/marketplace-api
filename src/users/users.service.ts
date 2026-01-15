@@ -159,15 +159,15 @@ export class UsersService {
       throw new BadRequestException('Usuário já possui outro perfil');
     }
 
-    const [professionalProfile] = await this.db
-      .insert(schema.professionalProfiles)
-      .values({
-        userId: userId,
-        categories: data.categories,
-        serviceRadiusKm: data.serviceRadiusKm,
-        portfolio: data.portfolio,
-      })
-      .returning();
+const [professionalProfile] = await this.db
+    .insert(schema.professionalProfiles)
+    .values({
+      userId,
+      categories: data.categories,
+      serviceRadiusKm: data.serviceRadiusKm,
+      portfolio: data.portfolio || [], 
+    })
+    .returning();
 
     await this.db
       .update(users)
