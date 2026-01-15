@@ -12,11 +12,14 @@ import {
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ProductOwnershipGuard } from 'src/auth/guards/ownership.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService) { }
 
   @Get()
   async findAll(
@@ -43,12 +46,15 @@ export class ProductsController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('merchant')
   async create(@Body() createProductDto: any) {
-    
+
     return this.productsService.create(createProductDto);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, ProductOwnershipGuard)
   async update(@Param('id') id: string, @Body() updateProductDto: any) {
     const updated = await this.productsService.update(id, updateProductDto);
     if (!updated) throw new NotFoundException('Produto não encontrado');
@@ -56,6 +62,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, ProductOwnershipGuard)
   async remove(@Param('id') id: string) {
     const deleted = await this.productsService.remove(id);
     if (!deleted) throw new NotFoundException('Produto não encontrado');
