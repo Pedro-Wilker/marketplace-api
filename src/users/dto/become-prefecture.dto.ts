@@ -9,7 +9,7 @@ export const BecomePrefectureDto = z.object({
   addressCity: z.string().min(3),
   addressState: z.string().length(2, 'Use sigla de 2 letras'),
   addressZipCode: z.string().regex(/^\d{5}-\d{3}$/, 'CEP inválido'),
-  location: z.string().optional(), // "lat,lng" ou depois usamos PostGIS
+  location: z.string().optional(), 
   officialWebsite: z.string().url().optional(),
   mainPhone: z.string().optional(),
   institutionalEmail: z.string().email().optional(),
