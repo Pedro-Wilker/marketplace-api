@@ -19,7 +19,7 @@ import { eq, desc } from 'drizzle-orm';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', 
+    origin: '*',
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -41,6 +41,15 @@ export class ChatGateway
 
   afterInit() {
     this.logger.log('WebSocket Gateway inicializado com sucesso');
+  }
+
+  private validateRoomAccess(room: string, userId: string): boolean {
+    if (!room) return false;
+    if (room.startsWith('chat_')) {
+      const participants = room.replace('chat_', '').split('_');
+      return participants.includes(userId);
+    }
+    return true; 
   }
 
   async handleConnection(client: Socket) {
@@ -70,10 +79,6 @@ export class ChatGateway
     this.logger.log(`Cliente desconectado: ${client.id}`);
   }
 
-  /**
-   * Cliente entra em uma conversa (room)
-   * Envia o histórico recente das mensagens
-   */
   @SubscribeMessage('joinConversation')
   async handleJoinConversation(
     @MessageBody() payload: { room: string },
@@ -84,23 +89,16 @@ export class ChatGateway
       return;
     }
 
-    const room = payload.room;
-    if (!room) {
-      client.emit('error', { message: 'Room é obrigatória' });
-      return;
-    }
+    const { room } = payload;
+    const userId = client.data.user.sub;
 
-    const participants = room.startsWith('chat_')
-      ? room.replace('chat_', '').split('_')
-      : [];
-
-    if (participants.length === 2 && !participants.includes(client.data.user.sub)) {
+    if (!this.validateRoomAccess(room, userId)) {
       client.emit('error', { message: 'Você não tem permissão para entrar nesta conversa' });
       return;
     }
 
     client.join(room);
-    this.logger.log(`User ${client.data.user.sub} entrou na room: ${room}`);
+    this.logger.log(`User ${userId} entrou na room: ${room}`);
 
     const history = await this.db
       .select({
@@ -115,8 +113,7 @@ export class ChatGateway
       .limit(50);
 
     client.emit('conversationHistory', history.reverse());
-
-    client.emit('joinedConversation', { room, userId: client.data.user.sub });
+    client.emit('joinedConversation', { room, userId });
   }
 
   @SubscribeMessage('sendMessage')
@@ -130,40 +127,49 @@ export class ChatGateway
     }
 
     const { room, content } = payload;
+    const userId = client.data.user.sub;
 
     if (!room || !content?.trim()) {
       client.emit('error', { message: 'Room e conteúdo são obrigatórios' });
       return;
     }
 
-    const trimmedContent = content.trim();
+    if (!this.validateRoomAccess(room, userId)) {
+      this.logger.warn(`Tentativa de injeção de mensagem na sala ${room} pelo user ${userId}`);
+      client.emit('error', { message: 'Acesso negado à sala' });
+      return; 
+    }
+
+    const safeContent = content.trim()
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
 
     const [savedMessage] = await this.db
       .insert(messages)
       .values({
         room,
-        senderId: client.data.user.sub,
-        content: trimmedContent,
+        senderId: userId,
+        content: safeContent,
       })
       .returning();
 
     this.server.to(room).emit('newMessage', {
       id: savedMessage.id,
-      senderId: client.data.user.sub,
-      content: trimmedContent,
+      senderId: userId,
+      content: safeContent,
       timestamp: savedMessage.timestamp,
     });
   }
 
-  /**
-   * Indicador de "digitando..." 
-   */
   @SubscribeMessage('typing')
   handleTyping(
     @MessageBody() payload: { room: string },
     @ConnectedSocket() client: Socket,
   ) {
     if (!client.data.user) return;
+    
+    if (!this.validateRoomAccess(payload.room, client.data.user.sub)) return;
+
     this.server.to(payload.room).emit('userTyping', {
       userId: client.data.user.sub,
       room: payload.room,

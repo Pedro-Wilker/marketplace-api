@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 
-// Mock do Drizzle (simples, sem biblioteca externa)
 const mockDb = {
   select: jest.fn().mockReturnThis(),
   insert: jest.fn().mockReturnThis(),
@@ -40,7 +39,7 @@ describe('UsersService', () => {
       const mockInput = {
         name: 'New User',
         email: 'new@email.com',
-        type: 'customer' as const, // ← SOLUÇÃO: adicione "as const"
+        type: 'customer' as const, 
       };
 
       const mockCreated = { id: '2', ...mockInput };

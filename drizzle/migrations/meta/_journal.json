@@ -36,6 +36,13 @@
       "when": 1768512451164,
       "tag": "0004_cheerful_ink",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769542208949,
+      "tag": "0005_complete_cerise",
+      "breakpoints": true
     }
   ]
 }

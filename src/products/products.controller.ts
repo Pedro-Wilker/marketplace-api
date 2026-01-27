@@ -9,17 +9,28 @@ import {
   NotFoundException,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
+  Req,
+  UsePipes,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { ProductsService } from './products.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ProductOwnershipGuard } from 'src/auth/guards/ownership.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
+import { UploadService } from '../upload/upload.service';
+import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
+import { CreateProductDto } from './dto/create-product.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) { }
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly uploadService: UploadService,
+  ) { }
 
   @Get()
   async findAll(
@@ -48,9 +59,25 @@ export class ProductsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('merchant')
-  async create(@Body() createProductDto: any) {
+  @UseInterceptors(FilesInterceptor('images', 10)) 
+  @UsePipes(new ZodValidationPipe(CreateProductDto))
+  async create(
+    @Body() createProductDto: CreateProductDto, 
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: any,
+  ) {
+    const imageUrls = files?.length 
+      ? await this.uploadService.uploadMultipleImages(files) 
+      : [];
 
-    return this.productsService.create(createProductDto);
+    const finalData = {
+      ...createProductDto,
+      merchantId: req.user.sub, 
+      images: imageUrls,
+      price: createProductDto.price.toString(),
+    };
+
+    return this.productsService.create(finalData);
   }
 
   @Patch(':id')

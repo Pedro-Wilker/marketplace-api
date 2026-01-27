@@ -9,6 +9,7 @@ import { ProductsModule } from './products/products.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductOwnershipGuard } from './auth/guards/ownership.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
     CategoriesModule,
     ProductsModule,
     AuthModule,
+    UploadModule,
   ],
   providers: [
     ChatGateway,
