@@ -9,12 +9,16 @@ import {
   NotFoundException,
   UseGuards,
   Req,
+  UsePipes,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
+
 import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { BecomePrefectureDto } from './dto/become-prefecture.dto';
 import { BecomeProfessionalDto } from './dto/become-professional.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -47,7 +51,8 @@ export class UsersController {
   }
 
   @Post()
-  async create(@Body() createUserDto: any) {
+  @UsePipes(new ZodValidationPipe(CreateUserDto)) 
+  async create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
@@ -68,26 +73,27 @@ export class UsersController {
     if (!deleted) {
       throw new NotFoundException('Usuário não encontrado');
     }
-    return { message: 'Usuário removido com sucesso' };
+    return { message: 'Usuário desativado com sucesso' };
   }
 
   @Post('become-merchant')
   @UseGuards(JwtAuthGuard)
-  async becomeMerchant(@Req() req, @Body() data: unknown) {
-    const parsed = CreateMerchantDto.parse(data);
-    return this.usersService.becomeMerchant(req.user.sub, parsed);
+  @UsePipes(new ZodValidationPipe(CreateMerchantDto))
+  async becomeMerchant(@Req() req, @Body() data: CreateMerchantDto) {
+    return this.usersService.becomeMerchant(req.user.sub, data);
   }
 
   @Post('become-prefecture')
   @UseGuards(JwtAuthGuard)
-  async becomePrefecture(@Req() req, @Body() body: unknown) {
-    const data = BecomePrefectureDto.parse(body);
+  @UsePipes(new ZodValidationPipe(BecomePrefectureDto))
+  async becomePrefecture(@Req() req, @Body() data: BecomePrefectureDto) {
     return this.usersService.becomePrefecture(req.user.sub, data);
   }
+
   @Post('become-professional')
   @UseGuards(JwtAuthGuard)
-  async becomeProfessional(@Req() req, @Body() body: unknown) {
-    const data = BecomeProfessionalDto.parse(body);
+  @UsePipes(new ZodValidationPipe(BecomeProfessionalDto))
+  async becomeProfessional(@Req() req, @Body() data: BecomeProfessionalDto) {
     return this.usersService.becomeProfessional(req.user.sub, data);
   }
 }

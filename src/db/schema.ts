@@ -1,4 +1,3 @@
-
 import {
   pgTable,
   uuid,
@@ -9,8 +8,7 @@ import {
   integer,
   jsonb,
   pgEnum,
-  primaryKey,
-  serial,
+  index, 
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -19,12 +17,11 @@ export const userTypeEnum = pgEnum('user_type', [
   'merchant',
   'professional',
   'prefecture',
-  'admin' 
+  'admin'
 ]);
 export const orderStatusEnum = pgEnum('order_status', ['pending', 'confirmed', 'preparing', 'delivered', 'cancelled']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'refunded']);
 export const priceTypeEnum = pgEnum('price_type', ['fixed', 'hourly', 'negotiable']);
-
 
 
 export const users = pgTable('users', {
@@ -37,36 +34,52 @@ export const users = pgTable('users', {
   type: userTypeEnum('type').notNull(),
   isVerified: boolean('is_verified').default(false),
   isActive: boolean('is_active').default(true),
+  
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }), 
+}, (table) => {
+  return {
+   
+    emailIdx: index('email_idx').on(table.email),
+    cpfCnpjIdx: index('cpf_cnpj_idx').on(table.cpfCnpj),
+  };
 });
 
 export const customerProfiles = pgTable('customer_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  
+  userId: uuid('user_id').primaryKey().references(() => users.id), 
   preferences: jsonb('preferences'),
 });
 
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  parentId: uuid('parent_id').references(() => categories.id),
+  type: text('type').notNull(),
+});
+
 export const merchantProfiles = pgTable('merchant_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').primaryKey().references(() => users.id), 
   businessName: text('business_name').notNull(),
   cnpj: text('cnpj'),
   categoryId: uuid('category_id').references(() => categories.id),
   openingHours: jsonb('opening_hours'),
   minimumOrder: decimal('minimum_order', { precision: 10, scale: 2 }),
   deliveryFee: decimal('delivery_fee', { precision: 10, scale: 2 }),
-  location: text('location'), 
+  location: text('location'),
 });
 
 export const professionalProfiles = pgTable('professional_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  categories: text('categories').array(), 
+  userId: uuid('user_id').primaryKey().references(() => users.id), 
+  categories: text('categories').array(),
   serviceRadiusKm: integer('service_radius_km'),
-  portfolio: jsonb('portfolio'), 
+  portfolio: jsonb('portfolio'),
 });
 
 export const prefectureProfiles = pgTable('prefecture_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
-  officialName: text('official_name').notNull(), 
+  userId: uuid('user_id').primaryKey().references(() => users.id), 
+  officialName: text('official_name').notNull(),
   cnpj: text('cnpj').notNull(),
   addressStreet: text('address_street').notNull(),
   addressNumber: text('address_number'),
@@ -83,13 +96,6 @@ export const prefectureProfiles = pgTable('prefecture_profiles', {
   status: text('status').$type<'pending' | 'approved' | 'rejected'>().default('pending'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const categories = pgTable('categories', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  parentId: uuid('parent_id').references(() => categories.id),
-  type: text('type').notNull(), 
 });
 
 export const products = pgTable('products', {
@@ -120,7 +126,7 @@ export const addresses = pgTable('addresses', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
+    .references(() => users.id), 
   street: text('street').notNull(),
   number: text('number'),
   complement: text('complement'),
@@ -128,7 +134,7 @@ export const addresses = pgTable('addresses', {
   city: text('city').notNull(),
   state: text('state').notNull(),
   zipCode: text('zip_code').notNull(),
-  location: text('location'), 
+  location: text('location'),
   isDefault: boolean('is_default').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -150,7 +156,7 @@ export const orders = pgTable('orders', {
 
 export const orderItems = pgTable('order_items', {
   id: uuid('id').primaryKey().defaultRandom(),
-  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+   orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   productId: uuid('product_id').notNull().references(() => products.id),
   quantity: integer('quantity').notNull(),
   priceUnit: decimal('price_unit', { precision: 10, scale: 2 }).notNull(),
@@ -158,8 +164,8 @@ export const orderItems = pgTable('order_items', {
 
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
-  room: text('room').notNull(), 
-  senderId: uuid('sender_id').notNull().references(() => users.id),
+  room: text('room').notNull(),
+  senderId: uuid('sender_id').notNull().references(() => users.id), 
   content: text('content').notNull(),
   timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
   isRead: boolean('is_read').default(false),
