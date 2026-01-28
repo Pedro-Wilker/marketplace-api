@@ -9,11 +9,11 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('register')
   async register(@Body() data: unknown) {
-    const parsed = RegisterDto.parse(data); 
+    const parsed = RegisterDto.parse(data);
     return this.authService.register(parsed);
   }
 
@@ -38,12 +38,18 @@ export class AuthController {
   @Post('forgot-password')
   async forgotPassword(@Body() data: unknown) {
     const parsed = ForgotPasswordDto.parse(data);
-    return this.authService.forgotPassword(parsed);
+    return this.authService.forgotPassword(parsed.email);
   }
 
   @Post('reset-password')
   async resetPassword(@Body() data: unknown) {
     const parsed = ResetPasswordDto.parse(data);
     return this.authService.resetPassword(parsed);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Req() req) {
+    return this.authService.logout(req.user.sub);
   }
 }
