@@ -12,8 +12,8 @@ import {
   UseInterceptors,
   UploadedFiles,
   Req,
-  UsePipes,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ProductsService } from './products.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -21,9 +21,11 @@ import { ProductOwnershipGuard } from 'src/auth/guards/ownership.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UploadService } from '../upload/upload.service';
-import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
+@ApiTags('Produtos')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
@@ -33,6 +35,10 @@ export class ProductsController {
   ) { }
 
   @Get()
+  @ApiOperation({ summary: 'Listar produtos com filtros' })
+  @ApiQuery({ name: 'merchantId', required: false })
+  @ApiQuery({ name: 'categoryId', required: false })
+  @ApiQuery({ name: 'isAvailable', required: false, type: Boolean })
   async findAll(
     @Query('merchantId') merchantId?: string,
     @Query('categoryId') categoryId?: string,
@@ -50,6 +56,7 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Detalhes de um produto' })
   async findOne(@Param('id') id: string) {
     const product = await this.productsService.findOne(id);
     if (!product) throw new NotFoundException('Produto não encontrado');
@@ -57,10 +64,28 @@ export class ProductsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('merchant')
-  @UseInterceptors(FilesInterceptor('images', 10)) 
-  @UsePipes(new ZodValidationPipe(CreateProductDto))
+  @UseInterceptors(FilesInterceptor('images', 10))
+  @ApiOperation({ summary: 'Criar produto (Com Upload)' })
+  @ApiConsumes('multipart/form-data') 
+  @ApiBody({
+    description: 'Dados do produto. As imagens são enviadas como arquivos binários.',
+    schema: {
+      allOf: [
+        { $ref: '#/components/schemas/CreateProductDto' }, 
+        {
+          type: 'object',
+          properties: {
+            images: {
+              type: 'array',
+              items: { type: 'string', format: 'binary' },
+            },
+          },
+        },
+      ],
+    },
+  })
   async create(
     @Body() createProductDto: CreateProductDto, 
     @UploadedFiles() files: Express.Multer.File[],
@@ -74,22 +99,30 @@ export class ProductsController {
       ...createProductDto,
       merchantId: req.user.sub, 
       images: imageUrls,
-      price: createProductDto.price.toString(),
+      price: createProductDto.price.toString(), 
     };
 
     return this.productsService.create(finalData);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, ProductOwnershipGuard)
-  async update(@Param('id') id: string, @Body() updateProductDto: any) {
-    const updated = await this.productsService.update(id, updateProductDto);
+  @UseGuards(ProductOwnershipGuard)
+  @ApiOperation({ summary: 'Atualizar produto' })
+  async update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+    const dataToUpdate = {
+        ...updateProductDto,
+        price: updateProductDto.price ? updateProductDto.price.toString() : undefined,
+    };
+
+    const updated = await this.productsService.update(id, dataToUpdate);
+    
     if (!updated) throw new NotFoundException('Produto não encontrado');
     return updated;
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, ProductOwnershipGuard)
+  @UseGuards(ProductOwnershipGuard)
+  @ApiOperation({ summary: 'Remover produto' })
   async remove(@Param('id') id: string) {
     const deleted = await this.productsService.remove(id);
     if (!deleted) throw new NotFoundException('Produto não encontrado');
