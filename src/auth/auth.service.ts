@@ -10,8 +10,10 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { InferSelectModel } from 'drizzle-orm';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { randomBytes } from 'crypto';
+import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service'; 
 
 type User = InferSelectModel<typeof users>;
 
@@ -21,6 +23,8 @@ export class AuthService {
     @Inject('DRIZZLE') private readonly db: NodePgDatabase<typeof schema>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly mailService: MailService,
   ) { }
 
   async register(data: RegisterDto): Promise<{ user: Partial<User>; accessToken: string }> {
@@ -73,6 +77,10 @@ export class AuthService {
 
     const [foundUser] = user;
 
+    if (foundUser.deletedAt) {
+       throw new UnauthorizedException('Conta desativada');
+    }
+
     const passwordValid = await compare(data.password, foundUser.passwordHash || '');
     if (!passwordValid) {
       throw new UnauthorizedException('Credenciais inválidas');
@@ -91,7 +99,7 @@ export class AuthService {
       },
     );
 
-    await this.db.insert(refreshTokens).values({  
+    await this.db.insert(refreshTokens).values({
       userId: foundUser.id,
       token: refreshToken,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -126,10 +134,13 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token inválido ou revogado');
     }
 
+     const user = await this.usersService.findOne(payload.sub);
+    if (!user) throw new UnauthorizedException('Usuário não encontrado');
+
     const accessToken = this.jwtService.sign({
-      sub: payload.sub,
-      email: payload.email,
-      type: payload.type,
+      sub: user.id,
+      email: user.email,
+      type: user.type,
     });
 
     return { accessToken };
@@ -161,29 +172,24 @@ export class AuthService {
     return { message: 'Senha alterada com sucesso' };
   }
 
-  async forgotPassword(data: ForgotPasswordDto): Promise<{ message: string }> {
-    const [user] = await this.db
-      .select()
-      .from(users)
-      .where(eq(users.email, data.email))
-      .limit(1);
-
-    if (!user) {
-      return { message: 'Se o e-mail existir, você receberá um link de recuperação' };
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    
+     if (!user) {
+      return { message: 'Se o e-mail existir, você receberá um link.' };
     }
 
-    const resetToken = this.jwtService.sign(
-      { sub: user.id },
-      { expiresIn: '1h' },
-    );
+    const resetToken = randomBytes(32).toString('hex');
+   
+    await this.mailService.sendPasswordResetEmail(user.email, resetToken);
 
-    return { message: 'Link de recuperação enviado para o e-mail' };
+    return { message: 'E-mail de recuperação enviado.' };
   }
 
   async resetPassword(data: ResetPasswordDto): Promise<{ message: string }> {
     let payload: any;
     try {
-      payload = this.jwtService.verify(data.token, {
+       payload = this.jwtService.verify(data.token, {
         secret: this.configService.get('JWT_SECRET'),
       });
     } catch {
@@ -198,5 +204,13 @@ export class AuthService {
       .where(eq(users.id, payload.sub));
 
     return { message: 'Senha redefinida com sucesso' };
+  }
+
+  async logout(userId: string) {
+    await this.db
+      .delete(schema.refreshTokens)
+      .where(eq(schema.refreshTokens.userId, userId));
+
+    return { message: 'Logout realizado com sucesso' };
   }
 }
