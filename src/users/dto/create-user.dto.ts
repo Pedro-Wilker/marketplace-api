@@ -1,12 +1,13 @@
+import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-export const CreateUserDto = z.object({
-  email: z.string().email(),
-  name: z.string().min(2),
-  password: z.string().min(8), 
-  phone: z.string().optional(),
-  cpfCnpj: z.string().optional(),
-  type: z.enum(['customer', 'merchant', 'professional', 'admin']),
+const CreateUserSchema = z.object({
+  email: z.string().email().describe('E-mail'),
+  name: z.string().min(2).describe('Nome completo'),
+  password: z.string().min(8).describe('Senha'),
+  phone: z.string().optional().describe('Telefone'),
+  cpfCnpj: z.string().optional().describe('CPF ou CNPJ'),
+  type: z.enum(['customer', 'merchant', 'professional', 'admin']).describe('Tipo de conta'),
 });
 
-export type CreateUserDto = z.infer<typeof CreateUserDto>;
+export class CreateUserDto extends createZodDto(CreateUserSchema) {}

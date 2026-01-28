@@ -1,16 +1,18 @@
+import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-export const OrderItemDto = z.object({
-  productId: z.string().uuid(),
-  quantity: z.number().int().positive(),
+const OrderItemSchema = z.object({
+  productId: z.string().uuid().describe('ID do produto'),
+  quantity: z.number().int().positive().describe('Quantidade'),
 });
 
-export const CreateOrderDto = z.object({
-  merchantId: z.string().uuid(), 
-  items: z.array(OrderItemDto).min(1, 'O pedido deve ter pelo menos um item'),
-  deliveryAddressId: z.string().uuid().optional(),
-  paymentMethod: z.enum(['credit_card', 'pix', 'cash']),
-  notes: z.string().max(500).optional(),
+const CreateOrderSchema = z.object({
+  merchantId: z.string().uuid().describe('ID da loja/comerciante'),
+  items: z.array(OrderItemSchema).min(1, 'O pedido deve ter pelo menos um item'),
+  deliveryAddressId: z.string().uuid().optional().describe('ID do endereço de entrega'),
+  paymentMethod: z.enum(['credit_card', 'pix', 'cash']).describe('Método de pagamento'),
+  notes: z.string().max(500).optional().describe('Observações do pedido'),
 });
 
-export type CreateOrderDto = z.infer<typeof CreateOrderDto>;
+export class OrderItemDto extends createZodDto(OrderItemSchema) {}
+export class CreateOrderDto extends createZodDto(CreateOrderSchema) {}

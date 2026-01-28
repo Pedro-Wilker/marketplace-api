@@ -9,22 +9,24 @@ import {
   NotFoundException,
   UseGuards,
   Req,
-  UsePipes,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { ZodValidationPipe } from 'src/common/pipes/zod-validation.pipe';
 
 import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { BecomePrefectureDto } from './dto/become-prefecture.dto';
 import { BecomeProfessionalDto } from './dto/become-professional.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 
+@ApiTags('Usuários')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
+  // Rota de teste pública (opcional manter ou remover em produção)
   @Get('test')
+  @ApiOperation({ summary: 'Teste de conexão com BD' })
   async testConnection() {
     const allUsers = await this.usersService.findAll(10, 0);
     return {
@@ -35,13 +37,17 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get()
+  @ApiOperation({ summary: 'Listar usuários' })
   async findAll() {
     return this.usersService.findAll();
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get(':id')
+  @ApiOperation({ summary: 'Buscar usuário por ID' })
   async findOne(@Param('id') id: string) {
     const user = await this.usersService.findOne(id);
     if (!user) {
@@ -51,14 +57,17 @@ export class UsersController {
   }
 
   @Post()
-  @UsePipes(new ZodValidationPipe(CreateUserDto)) 
+  @ApiOperation({ summary: 'Criar usuário (Interno/Admin)' })
   async create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Patch(':id')
+  @ApiOperation({ summary: 'Atualizar usuário' })
   async update(@Param('id') id: string, @Body() updateUserDto: any) {
+    // TODO: Criar UpdateUserDto (Partial<CreateUserDto>)
     const updated = await this.usersService.update(id, updateUserDto);
     if (!updated) {
       throw new NotFoundException('Usuário não encontrado');
@@ -67,7 +76,9 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @Delete(':id')
+  @ApiOperation({ summary: 'Desativar usuário (Soft Delete)' })
   async remove(@Param('id') id: string) {
     const deleted = await this.usersService.remove(id);
     if (!deleted) {
@@ -78,21 +89,24 @@ export class UsersController {
 
   @Post('become-merchant')
   @UseGuards(JwtAuthGuard)
-  @UsePipes(new ZodValidationPipe(CreateMerchantDto))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Transformar usuário em Comerciante' })
   async becomeMerchant(@Req() req, @Body() data: CreateMerchantDto) {
     return this.usersService.becomeMerchant(req.user.sub, data);
   }
 
   @Post('become-prefecture')
   @UseGuards(JwtAuthGuard)
-  @UsePipes(new ZodValidationPipe(BecomePrefectureDto))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Solicitar perfil de Prefeitura' })
   async becomePrefecture(@Req() req, @Body() data: BecomePrefectureDto) {
     return this.usersService.becomePrefecture(req.user.sub, data);
   }
 
   @Post('become-professional')
   @UseGuards(JwtAuthGuard)
-  @UsePipes(new ZodValidationPipe(BecomeProfessionalDto))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Transformar usuário em Profissional' })
   async becomeProfessional(@Req() req, @Body() data: BecomeProfessionalDto) {
     return this.usersService.becomeProfessional(req.user.sub, data);
   }
