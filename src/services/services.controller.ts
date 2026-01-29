@@ -14,13 +14,13 @@ export class ServicesController {
   constructor(
     private readonly servicesService: ServicesService,
     private readonly uploadService: UploadService
-  ) {}
+  ) { }
 
   @Post()
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('professional')
-  @UseInterceptors(FilesInterceptor('portfolio', 5)) 
+  @UseInterceptors(FilesInterceptor('portfolio', 5))
   @ApiOperation({ summary: 'Cadastrar serviço (Com Upload)' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -40,20 +40,24 @@ export class ServicesController {
     },
   })
   async create(
-    @Req() req, 
+    @Req() req,
     @Body() dto: CreateServiceDto,
     @UploadedFiles() files: Express.Multer.File[]
   ) {
     const imageUrls = files?.length ? await this.uploadService.uploadMultipleImages(files) : [];
- 
+
     return this.servicesService.create(req.user.sub, dto, imageUrls);
   }
 
   @Get()
   @ApiOperation({ summary: 'Listar serviços' })
   @ApiQuery({ name: 'professionalId', required: false })
-  findAll(@Query('professionalId') profId?: string) {
-    return this.servicesService.findAll(profId);
+  @ApiQuery({ name: 'categoryId', required: false }) 
+  findAll(
+    @Query('professionalId') professionalId?: string,
+    @Query('categoryId') categoryId?: string,
+  ) {
+    return this.servicesService.findAll({ professionalId, categoryId });
   }
 
   @Delete(':id')

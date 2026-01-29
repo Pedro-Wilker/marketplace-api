@@ -22,7 +22,7 @@ export class ServicesService {
       throw new BadRequestException('Você precisa ser um profissional para criar serviços.');
     }
 
-  
+
     const [newService] = await this.db
       .insert(services)
       .values({
@@ -36,15 +36,21 @@ export class ServicesService {
       })
       .returning();
 
-  
+
     return newService;
   }
 
-  async findAll(professionalId?: string) {
+  async findAll(filters?: { professionalId?: string; categoryId?: string }) {
     const query = this.db.select().from(services);
-    if (professionalId) {
-      query.where(eq(services.professionalId, professionalId));
+
+    if (filters?.professionalId) {
+      query.where(eq(services.professionalId, filters.professionalId));
     }
+
+    if (filters?.categoryId) {
+      query.where(eq(services.categoryId, filters.categoryId));
+    }
+
     return await query;
   }
 
@@ -58,7 +64,7 @@ export class ServicesService {
       .delete(services)
       .where(and(eq(services.id, serviceId), eq(services.professionalId, userId)))
       .returning();
-      
+
     if (result.length === 0) throw new NotFoundException('Serviço não encontrado ou acesso negado');
     return { message: 'Serviço removido' };
   }

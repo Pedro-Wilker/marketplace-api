@@ -10,4 +10,4 @@ const CreateServiceSchema = z.object({
   categoryId: z.string().uuid().optional().describe('ID da categoria'),
 });
 
-export class CreateServiceDto extends createZodDto(CreateServiceSchema) {}
+export class CreateServiceDto extends createZodDto(CreateServiceSchema) { }
