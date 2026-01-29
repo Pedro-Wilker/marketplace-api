@@ -9,6 +9,7 @@ import {
   NotFoundException,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -84,6 +85,20 @@ export class UsersController {
       throw new NotFoundException('Usuário não encontrado');
     }
     return { message: 'Usuário desativado com sucesso' };
+  }
+
+  @Get('prefecture/search')
+  @ApiOperation({ summary: 'Buscar dados da prefeitura por cidade' })
+  async findPrefectureByCity(@Query('city') city: string) {
+    if (!city) throw new NotFoundException('Cidade é obrigatória');
+    
+    const prefecture = await this.usersService.findPrefectureByCity(city);
+    
+    if (!prefecture) {
+ 
+      return null; 
+    }
+    return prefecture;
   }
 
   @Post('become-merchant')

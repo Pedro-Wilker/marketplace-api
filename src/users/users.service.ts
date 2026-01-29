@@ -2,16 +2,15 @@ import { Injectable, Inject, NotFoundException, BadRequestException } from '@nes
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
 import { merchantProfiles, users, prefectureProfiles, professionalProfiles } from '../db/schema';
-import { eq, and, isNull, InferSelectModel, InferInsertModel } from 'drizzle-orm';
+import { eq, and, isNull, InferSelectModel, InferInsertModel, ilike } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
-
 import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { BecomePrefectureDto } from './dto/become-prefecture.dto';
 import { BecomeProfessionalDto } from './dto/become-professional.dto';
-import { CreateUserDto } from './dto/create-user.dto'; 
+import { CreateUserDto } from './dto/create-user.dto';
 
 type User = InferSelectModel<typeof users>;
-type NewUser = InferInsertModel<typeof users>; 
+type NewUser = InferInsertModel<typeof users>;
 type MerchantProfile = InferSelectModel<typeof merchantProfiles>;
 type ProfessionalProfile = InferSelectModel<typeof professionalProfiles>;
 type PrefectureProfile = InferSelectModel<typeof prefectureProfiles>;
@@ -26,7 +25,7 @@ export class UsersService {
     return await this.db
       .select()
       .from(users)
-      .where(isNull(users.deletedAt)) 
+      .where(isNull(users.deletedAt))
       .limit(limit)
       .offset(offset);
   }
@@ -38,12 +37,24 @@ export class UsersService {
       .where(
         and(
           eq(users.id, id),
-          isNull(users.deletedAt) 
+          isNull(users.deletedAt)
         )
       )
       .limit(1);
 
     return user ?? null;
+  }
+
+  async findPrefectureByCity(city: string): Promise<PrefectureProfile | null> {
+    const [profile] = await this.db
+      .select()
+      .from(schema.prefectureProfiles)
+      .where(
+        ilike(schema.prefectureProfiles.addressCity, `%${city}%`)
+      )
+      .limit(1);
+
+    return profile ?? null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -93,9 +104,9 @@ export class UsersService {
   async update(id: string, data: Partial<NewUser>): Promise<User | null> {
     const [updatedUser] = await this.db
       .update(users)
-      .set({ 
-        ...data, 
-        updatedAt: new Date() 
+      .set({
+        ...data,
+        updatedAt: new Date()
       })
       .where(eq(users.id, id))
       .returning();
@@ -106,9 +117,9 @@ export class UsersService {
   async remove(id: string): Promise<boolean> {
     const [deletedUser] = await this.db
       .update(users)
-      .set({ 
+      .set({
         deletedAt: new Date(),
-        isActive: false 
+        isActive: false
       })
       .where(eq(users.id, id))
       .returning();
@@ -119,7 +130,7 @@ export class UsersService {
   async becomeMerchant(userId: string, data: CreateMerchantDto): Promise<MerchantProfile> {
     return await this.db.transaction(async (tx) => {
       const [user] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
-      
+
       if (!user) throw new NotFoundException('Usuário não encontrado');
       if (user.type !== 'customer') throw new BadRequestException('Usuário já possui um perfil definido');
 
@@ -133,7 +144,7 @@ export class UsersService {
           openingHours: data.openingHours,
           minimumOrder: data.minimumOrder?.toString(),
           deliveryFee: data.deliveryFee?.toString(),
-          location: data.location, 
+          location: data.location,
         })
         .returning();
 
@@ -149,7 +160,7 @@ export class UsersService {
   async becomePrefecture(userId: string, data: BecomePrefectureDto): Promise<PrefectureProfile> {
     return await this.db.transaction(async (tx) => {
       const [user] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
-      
+
       if (!user) throw new NotFoundException('Usuário não encontrado');
       if (user.type !== 'customer') throw new BadRequestException('Usuário já possui um perfil definido');
 
@@ -187,7 +198,7 @@ export class UsersService {
   async becomeProfessional(userId: string, data: BecomeProfessionalDto): Promise<ProfessionalProfile> {
     return await this.db.transaction(async (tx) => {
       const [user] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
-      
+
       if (!user) throw new NotFoundException('Usuário não encontrado');
       if (user.type !== 'customer') throw new BadRequestException('Usuário já possui um perfil definido');
 
