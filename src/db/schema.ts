@@ -31,6 +31,10 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   phone: text('phone'),
   cpfCnpj: text('cpf_cnpj').unique(),
+  
+  city: text('city'),
+  state: text('state'), 
+
   type: userTypeEnum('type').notNull(),
   isVerified: boolean('is_verified').default(false),
   isActive: boolean('is_active').default(true),
@@ -40,7 +44,6 @@ export const users = pgTable('users', {
   deletedAt: timestamp('deleted_at', { withTimezone: true }), 
 }, (table) => {
   return {
-   
     emailIdx: index('email_idx').on(table.email),
     cpfCnpjIdx: index('cpf_cnpj_idx').on(table.cpfCnpj),
   };

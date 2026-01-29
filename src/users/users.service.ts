@@ -61,9 +61,7 @@ export class UsersService {
     return user ?? null;
   }
 
-  
   async create(data: CreateUserDto): Promise<User> {
-   
     const existingUser = await this.findByEmail(data.email);
     if (existingUser) {
       throw new BadRequestException('Email já está em uso.');
@@ -93,10 +91,12 @@ export class UsersService {
   }
 
   async update(id: string, data: Partial<NewUser>): Promise<User | null> {
- 
     const [updatedUser] = await this.db
       .update(users)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ 
+        ...data, 
+        updatedAt: new Date() 
+      })
       .where(eq(users.id, id))
       .returning();
 
@@ -116,10 +116,8 @@ export class UsersService {
     return !!deletedUser;
   }
 
-
   async becomeMerchant(userId: string, data: CreateMerchantDto): Promise<MerchantProfile> {
     return await this.db.transaction(async (tx) => {
-      
       const [user] = await tx.select().from(users).where(eq(users.id, userId)).limit(1);
       
       if (!user) throw new NotFoundException('Usuário não encontrado');
@@ -135,6 +133,7 @@ export class UsersService {
           openingHours: data.openingHours,
           minimumOrder: data.minimumOrder?.toString(),
           deliveryFee: data.deliveryFee?.toString(),
+          location: data.location, 
         })
         .returning();
 

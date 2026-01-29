@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-
+import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { BecomePrefectureDto } from './dto/become-prefecture.dto';
 import { BecomeProfessionalDto } from './dto/become-professional.dto';
@@ -66,8 +66,7 @@ export class UsersController {
   @ApiBearerAuth('JWT-auth')
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar usuário' })
-  async update(@Param('id') id: string, @Body() updateUserDto: any) {
-    // TODO: Criar UpdateUserDto (Partial<CreateUserDto>)
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) { // Use o DTO
     const updated = await this.usersService.update(id, updateUserDto);
     if (!updated) {
       throw new NotFoundException('Usuário não encontrado');
@@ -110,4 +109,6 @@ export class UsersController {
   async becomeProfessional(@Req() req, @Body() data: BecomeProfessionalDto) {
     return this.usersService.becomeProfessional(req.user.sub, data);
   }
+
+
 }
