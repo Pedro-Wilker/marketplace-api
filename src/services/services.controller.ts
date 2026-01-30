@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, UseInterceptors, UploadedFiles, Query, NotFoundException, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ServicesService } from './services.service';
@@ -67,5 +67,22 @@ export class ServicesController {
   @ApiOperation({ summary: 'Remover serviço' })
   remove(@Req() req, @Param('id') id: string) {
     return this.servicesService.remove(req.user.sub, id);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Buscar serviço por ID' })
+  async findOne(@Param('id') id: string) {
+    const service = await this.servicesService.findOne(id);
+    if (!service) throw new NotFoundException('Serviço não encontrado');
+    return service;
+  }
+
+  @Patch(':id')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('professional') 
+  @ApiOperation({ summary: 'Atualizar serviço' })
+  async update(@Req() req, @Param('id') id: string, @Body() dto: Partial<CreateServiceDto>) {
+    return this.servicesService.update(req.user.sub, id, dto);
   }
 }
