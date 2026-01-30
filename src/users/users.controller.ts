@@ -19,13 +19,15 @@ import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { BecomePrefectureDto } from './dto/become-prefecture.dto';
 import { BecomeProfessionalDto } from './dto/become-professional.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdatePrefectureDto } from './dto/update-prefecture.dto';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 
 @ApiTags('Usuários')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
-  // Rota de teste pública (opcional manter ou remover em produção)
   @Get('test')
   @ApiOperation({ summary: 'Teste de conexão com BD' })
   async testConnection() {
@@ -125,5 +127,13 @@ export class UsersController {
     return this.usersService.becomeProfessional(req.user.sub, data);
   }
 
+  @Patch('profile/prefecture')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('prefecture') 
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Atualizar dados do perfil da Prefeitura' })
+  async updatePrefectureProfile(@Req() req, @Body() dto: UpdatePrefectureDto) {
+    return this.usersService.updatePrefectureProfile(req.user.sub, dto);
+  }
 
 }

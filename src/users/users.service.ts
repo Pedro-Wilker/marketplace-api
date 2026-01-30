@@ -8,6 +8,7 @@ import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { BecomePrefectureDto } from './dto/become-prefecture.dto';
 import { BecomeProfessionalDto } from './dto/become-professional.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdatePrefectureDto } from './dto/update-prefecture.dto';
 
 type User = InferSelectModel<typeof users>;
 type NewUser = InferInsertModel<typeof users>;
@@ -56,6 +57,37 @@ export class UsersService {
 
     return profile ?? null;
   }
+
+  async updatePrefectureProfile(userId: string, data: UpdatePrefectureDto) {
+    const [profile] = await this.db
+      .select()
+      .from(schema.prefectureProfiles)
+      .where(eq(schema.prefectureProfiles.userId, userId))
+      .limit(1);
+
+    if (!profile) {
+      throw new NotFoundException('Perfil de prefeitura não encontrado para este usuário.');
+    }
+
+    const [updatedProfile] = await this.db
+      .update(schema.prefectureProfiles)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.prefectureProfiles.userId, userId))
+      .returning();
+
+    if (data.addressCity || data.addressState) {
+      await this.db.update(schema.users).set({
+        city: data.addressCity || undefined,
+        state: data.addressState || undefined
+      }).where(eq(schema.users.id, userId));
+    }
+
+    return updatedProfile;
+  }
+
 
   async findByEmail(email: string): Promise<User | null> {
     const [user] = await this.db

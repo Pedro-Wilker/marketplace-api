@@ -17,7 +17,6 @@ const pool = new Pool({
 
 const db = drizzle(pool, { schema });
 
-// --- CONFIGURAÇÃO DOS DADOS ---
 
 const CITIES = [
   {
