@@ -68,4 +68,31 @@ export class ServicesService {
     if (result.length === 0) throw new NotFoundException('Serviço não encontrado ou acesso negado');
     return { message: 'Serviço removido' };
   }
+
+  async update(userId: string, serviceId: string, data: Partial<CreateServiceDto>) {
+    const [service] = await this.db
+      .select()
+      .from(services)
+      .where(and(eq(services.id, serviceId), eq(services.professionalId, userId)))
+      .limit(1);
+
+    if (!service) {
+      throw new NotFoundException('Serviço não encontrado ou você não tem permissão para editá-lo.');
+    }
+
+    const [updatedService] = await this.db
+      .update(services)
+      .set({
+        name: data.name,
+        description: data.description,
+        priceType: data.priceType,
+        price: data.price?.toString(),
+        estimatedDuration: data.estimatedDuration,
+        categoryId: data.categoryId,
+      })
+      .where(eq(services.id, serviceId))
+      .returning();
+
+    return updatedService;
+  }
 }
