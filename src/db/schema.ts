@@ -49,6 +49,19 @@ export const users = pgTable('users', {
   };
 });
 
+export const serviceRequests = pgTable('service_requests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  customerId: uuid('customer_id').references(() => users.id).notNull(), 
+  serviceId: uuid('service_id').references(() => services.id).notNull(), 
+  providerId: uuid('provider_id').references(() => users.id).notNull(), 
+  
+  status: text('status', { enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled'] }).default('pending').notNull(),
+  customerNote: text('customer_note'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at'),
+});
+
 export const customerProfiles = pgTable('customer_profiles', {
   
   userId: uuid('user_id').primaryKey().references(() => users.id), 
