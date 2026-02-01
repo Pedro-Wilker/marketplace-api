@@ -12,6 +12,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
+
 export const userTypeEnum = pgEnum('user_type', [
   'customer',
   'merchant',
@@ -85,6 +86,8 @@ export const merchantProfiles = pgTable('merchant_profiles', {
   deliveryFee: decimal('delivery_fee', { precision: 10, scale: 2 }),
   location: text('location'),
 });
+
+
 
 export const professionalProfiles = pgTable('professional_profiles', {
   userId: uuid('user_id').primaryKey().references(() => users.id), 
@@ -179,12 +182,12 @@ export const orderItems = pgTable('order_items', {
 });
 
 export const messages = pgTable('messages', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  room: text('room').notNull(),
-  senderId: uuid('sender_id').notNull().references(() => users.id), 
+  id: uuid('id').defaultRandom().primaryKey(),
+  requestId: uuid('request_id').references(() => serviceRequests.id).notNull(), 
+  senderId: uuid('sender_id').references(() => users.id).notNull(), 
   content: text('content').notNull(),
-  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
-  isRead: boolean('is_read').default(false),
+  read: boolean('read').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const refreshTokens = pgTable('refresh_tokens', {
