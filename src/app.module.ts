@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DrizzleModule } from './db/drizzle.module';
 import { UsersModule } from './users/users.module';
-import { ChatGateway } from './gateways/chat.gateway';
+
 import { JwtModule } from '@nestjs/jwt';
 import { CategoriesModule } from './categories/categories.module';
 import { ProductsModule } from './products/products.module';
@@ -11,6 +11,7 @@ import { ProductOwnershipGuard } from './auth/guards/ownership.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { UploadModule } from './upload/upload.module';
 import { ServicesModule } from './services/services.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -28,10 +29,10 @@ import { ServicesModule } from './services/services.module';
     ProductsModule,
     AuthModule,
     UploadModule,
-    ServicesModule
+    ServicesModule,
+    ChatModule
   ],
   providers: [
-    ChatGateway,
     ProductOwnershipGuard,
     RolesGuard,
   ],
