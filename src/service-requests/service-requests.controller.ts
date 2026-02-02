@@ -36,4 +36,12 @@ export class ServiceRequestsController {
   ) {
     return this.requestsService.updateStatus(req.user.sub, id, status);
   }
+
+  @Get('mine')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Listar minhas solicitações (Cliente)' })
+  findAllByCustomer(@Req() req) {
+    return this.requestsService.findAllByCustomer(req.user.sub);
+  }
 }
