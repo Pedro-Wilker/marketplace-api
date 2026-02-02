@@ -76,4 +76,21 @@ export class ServiceRequestsService {
 
     return updated;
   }
+
+  async findAllByCustomer(customerId: string) {
+    return await this.db
+      .select({
+        id: serviceRequests.id,
+        status: serviceRequests.status,
+        customerNote: serviceRequests.customerNote,
+        createdAt: serviceRequests.createdAt,
+        serviceName: services.name,
+        providerName: users.name, 
+      })
+      .from(serviceRequests)
+      .innerJoin(services, eq(serviceRequests.serviceId, services.id))
+      .innerJoin(users, eq(serviceRequests.providerId, users.id)) 
+      .where(eq(serviceRequests.customerId, customerId))
+      .orderBy(desc(serviceRequests.createdAt));
+  }
 }
