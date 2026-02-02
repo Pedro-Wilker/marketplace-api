@@ -12,6 +12,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { UploadModule } from './upload/upload.module';
 import { ServicesModule } from './services/services.module';
 import { ChatModule } from './chat/chat.module';
+import { ServiceRequestsModule } from './service-requests/service-requests.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ChatModule } from './chat/chat.module';
     AuthModule,
     UploadModule,
     ServicesModule,
+    ServiceRequestsModule,
     ChatModule
   ],
   providers: [
