@@ -13,6 +13,8 @@ import { UploadModule } from './upload/upload.module';
 import { ServicesModule } from './services/services.module';
 import { ChatModule } from './chat/chat.module';
 import { ServiceRequestsModule } from './service-requests/service-requests.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -32,7 +34,9 @@ import { ServiceRequestsModule } from './service-requests/service-requests.modul
     UploadModule,
     ServicesModule,
     ServiceRequestsModule,
-    ChatModule
+    ChatModule,
+    ReviewsModule,
+    NotificationsModule
   ],
   providers: [
     ProductOwnershipGuard,

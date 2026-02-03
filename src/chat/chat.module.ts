@@ -5,6 +5,7 @@ import { ChatController } from './chat.controller';
 import { DrizzleModule } from '../db/drizzle.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
           signOptions: { expiresIn: '1d' },
         }),
       }),
+    NotificationsModule, 
   ],
   providers: [ChatGateway, ChatService],
   controllers: [ChatController],
