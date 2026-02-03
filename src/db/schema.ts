@@ -62,6 +62,8 @@ export const reviews = pgTable('reviews', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+
+
 export const serviceRequests = pgTable('service_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
   customerId: uuid('customer_id').references(() => users.id).notNull(), 
@@ -213,6 +215,20 @@ export const refreshTokens = pgTable('refresh_tokens', {
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
 });
 
+export const notificationTypeEnum = pgEnum('notification_type', ['message', 'request_new', 'request_update', 'system']);
+
+export const notifications = pgTable('notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id).notNull(),
+  type: notificationTypeEnum('type').notNull(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  read: boolean('read').default(false),
+  link: text('link'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   messages: many(messages),
+  notifications: many(notifications),
 }));

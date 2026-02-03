@@ -52,7 +52,7 @@ export class ServicesController {
   @Get()
   @ApiOperation({ summary: 'Listar serviços' })
   @ApiQuery({ name: 'professionalId', required: false })
-  @ApiQuery({ name: 'categoryId', required: false }) 
+  @ApiQuery({ name: 'categoryId', required: false })
   findAll(
     @Query('professionalId') professionalId?: string,
     @Query('categoryId') categoryId?: string,
@@ -80,9 +80,15 @@ export class ServicesController {
   @Patch(':id')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('professional') 
+  @Roles('professional')
   @ApiOperation({ summary: 'Atualizar serviço' })
   async update(@Req() req, @Param('id') id: string, @Body() dto: Partial<CreateServiceDto>) {
     return this.servicesService.update(req.user.sub, id, dto);
+  }
+
+  @Get('featured')
+  @ApiOperation({ summary: 'Listar serviços em destaque' })
+  findFeatured() {
+    return this.servicesService.findFeatured();
   }
 }

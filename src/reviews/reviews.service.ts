@@ -1,13 +1,17 @@
 import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
-import { reviews, serviceRequests, users } from '../db/schema';
+import { reviews, serviceRequests, services, users } from '../db/schema'; // Adicione services e users
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ReviewsService {
-  constructor(@Inject('DRIZZLE') private readonly db: NodePgDatabase<typeof schema>) {}
+  constructor(
+    @Inject('DRIZZLE') private readonly db: NodePgDatabase<typeof schema>,
+    private readonly notificationsService: NotificationsService
+  ) {}
 
   async create(authorId: string, data: CreateReviewDto) {
     if (data.requestId) {
@@ -36,6 +40,27 @@ export class ReviewsService {
         comment: data.comment,
       })
       .returning();
+
+    const [serviceDetails] = await this.db
+      .select({
+        name: services.name,
+        professionalId: services.professionalId,
+      })
+      .from(services)
+      .where(eq(services.id, data.serviceId))
+      .limit(1);
+
+    if (serviceDetails) {
+      const stars = '⭐'.repeat(data.rating);
+      
+      await this.notificationsService.create(
+        serviceDetails.professionalId,
+        'system',
+        'Nova Avaliação Recebida!',
+        `Seu serviço "${serviceDetails.name}" recebeu ${data.rating} estrelas! ${stars}`,
+        '/dashboard/servicos' 
+      );
+    }
 
     return review;
   }

@@ -4,10 +4,14 @@ import * as schema from '../db/schema';
 import { serviceRequests, services, users } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { CreateRequestDto } from './dto/create-request.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ServiceRequestsService {
-  constructor(@Inject('DRIZZLE') private readonly db: NodePgDatabase<typeof schema>) {}
+  constructor(
+    @Inject('DRIZZLE') private readonly db: NodePgDatabase<typeof schema>,
+    private readonly notificationsService: NotificationsService
+  ) { }
 
   async create(customerId: string, data: CreateRequestDto) {
     const [service] = await this.db
@@ -24,11 +28,19 @@ export class ServiceRequestsService {
       .values({
         customerId,
         serviceId: data.serviceId,
-        providerId: service.professionalId, 
+        providerId: service.professionalId,
         customerNote: data.customerNote,
         status: 'pending'
       })
       .returning();
+
+    await this.notificationsService.create(
+      request.providerId,
+      'request_new',
+      'Nova Solicitação!',
+      `Você recebeu um novo pedido para o serviço: ${service.name}.`,
+      '/dashboard/solicitacoes'
+    );
 
     return request;
   }
@@ -40,10 +52,19 @@ export class ServiceRequestsService {
         status: serviceRequests.status,
         customerNote: serviceRequests.customerNote,
         createdAt: serviceRequests.createdAt,
+        updatedAt: serviceRequests.updatedAt, 
+
+        serviceId: services.id,
         serviceName: services.name,
+        serviceDescription: services.description, 
+        servicePrice: services.price,             
+        servicePriceType: services.priceType,     
+
+        customerId: users.id,
         customerName: users.name,
         customerPhone: users.phone,
         customerEmail: users.email,
+        customerCity: users.city,                 
       })
       .from(serviceRequests)
       .innerJoin(services, eq(serviceRequests.serviceId, services.id))
@@ -64,15 +85,30 @@ export class ServiceRequestsService {
     if (!request) throw new NotFoundException('Solicitação não encontrada');
     if (request.providerId !== providerId) throw new ForbiddenException('Você não tem permissão para alterar este pedido');
 
-   
     const [updated] = await this.db
       .update(serviceRequests)
-      .set({ 
-        status, 
-        updatedAt: new Date() 
+      .set({
+        status,
+        updatedAt: new Date()
       })
       .where(eq(serviceRequests.id, requestId))
       .returning();
+
+    let statusMessage = '';
+    switch (status) {
+      case 'accepted': statusMessage = 'Seu pedido foi aceito e está em andamento.'; break;
+      case 'completed': statusMessage = 'Seu serviço foi concluído! Não esqueça de avaliar.'; break;
+      case 'rejected': statusMessage = 'Seu pedido foi recusado pelo prestador.'; break;
+      default: statusMessage = `O status do seu pedido mudou para: ${status}`;
+    }
+
+    await this.notificationsService.create(
+      updated.customerId,
+      'request_update',
+      'Atualização no Pedido',
+      statusMessage,
+      '/minhas-solicitacoes'
+    );
 
     return updated;
   }
@@ -81,15 +117,18 @@ export class ServiceRequestsService {
     return await this.db
       .select({
         id: serviceRequests.id,
+        serviceId: serviceRequests.serviceId,
+        providerId: serviceRequests.providerId,
+
         status: serviceRequests.status,
         customerNote: serviceRequests.customerNote,
         createdAt: serviceRequests.createdAt,
         serviceName: services.name,
-        providerName: users.name, 
+        providerName: users.name,
       })
       .from(serviceRequests)
       .innerJoin(services, eq(serviceRequests.serviceId, services.id))
-      .innerJoin(users, eq(serviceRequests.providerId, users.id)) 
+      .innerJoin(users, eq(serviceRequests.providerId, users.id))
       .where(eq(serviceRequests.customerId, customerId))
       .orderBy(desc(serviceRequests.createdAt));
   }

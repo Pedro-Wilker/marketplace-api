@@ -1,8 +1,8 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
-import { services, professionalProfiles } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { services, professionalProfiles, reviews } from '../db/schema';
+import { eq, and, sql, desc } from 'drizzle-orm';
 import { CreateServiceDto } from './dto/create-service.dto';
 
 @Injectable()
@@ -22,7 +22,6 @@ export class ServicesService {
       throw new BadRequestException('Você precisa ser um profissional para criar serviços.');
     }
 
-
     const [newService] = await this.db
       .insert(services)
       .values({
@@ -35,7 +34,6 @@ export class ServicesService {
         categoryId: data.categoryId,
       })
       .returning();
-
 
     return newService;
   }
@@ -52,6 +50,24 @@ export class ServicesService {
     }
 
     return await query;
+  }
+
+  async findFeatured() {
+    return await this.db
+      .select({
+        id: services.id,
+        name: services.name,
+        description: services.description,
+        categoryId: services.categoryId,
+        price: services.price,
+        avgRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        reviewCount: sql<number>`COUNT(${reviews.id})`,
+      })
+      .from(services)
+      .leftJoin(reviews, eq(services.id, reviews.serviceId))
+      .groupBy(services.id)
+      .orderBy(desc(sql`COALESCE(AVG(${reviews.rating}), 0)`))
+      .limit(4); 
   }
 
   async findOne(id: string) {
