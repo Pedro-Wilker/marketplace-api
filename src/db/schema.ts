@@ -50,6 +50,18 @@ export const users = pgTable('users', {
   };
 });
 
+export const reviews = pgTable('reviews', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  serviceId: uuid('service_id').references(() => services.id).notNull(),
+  authorId: uuid('author_id').references(() => users.id).notNull(),
+  requestId: uuid('request_id').references(() => serviceRequests.id), // Opcional, mas bom para validação
+  
+  rating: integer('rating').notNull(), 
+  comment: text('comment'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const serviceRequests = pgTable('service_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
   customerId: uuid('customer_id').references(() => users.id).notNull(), 
