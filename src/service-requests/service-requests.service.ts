@@ -39,7 +39,7 @@ export class ServiceRequestsService {
       'request_new',
       'Nova Solicitação!',
       `Você recebeu um novo pedido para o serviço: ${service.name}.`,
-      '/dashboard/solicitacoes'
+      '/dashboard/solicitacoes' 
     );
 
     return request;
@@ -52,19 +52,19 @@ export class ServiceRequestsService {
         status: serviceRequests.status,
         customerNote: serviceRequests.customerNote,
         createdAt: serviceRequests.createdAt,
-        updatedAt: serviceRequests.updatedAt, 
+        updatedAt: serviceRequests.updatedAt,
 
         serviceId: services.id,
         serviceName: services.name,
-        serviceDescription: services.description, 
-        servicePrice: services.price,             
-        servicePriceType: services.priceType,     
+        serviceDescription: services.description,
+        servicePrice: services.price,
+        servicePriceType: services.priceType,
 
         customerId: users.id,
         customerName: users.name,
         customerPhone: users.phone,
         customerEmail: users.email,
-        customerCity: users.city,                 
+        customerCity: users.city,
       })
       .from(serviceRequests)
       .innerJoin(services, eq(serviceRequests.serviceId, services.id))
@@ -95,19 +95,28 @@ export class ServiceRequestsService {
       .returning();
 
     let statusMessage = '';
+    let notificationLink = '/dashboard/meus-pedidos'; 
     switch (status) {
-      case 'accepted': statusMessage = 'Seu pedido foi aceito e está em andamento.'; break;
-      case 'completed': statusMessage = 'Seu serviço foi concluído! Não esqueça de avaliar.'; break;
-      case 'rejected': statusMessage = 'Seu pedido foi recusado pelo prestador.'; break;
-      default: statusMessage = `O status do seu pedido mudou para: ${status}`;
+      case 'accepted': 
+        statusMessage = 'Seu pedido foi aceito e está em andamento.'; 
+        break;
+      case 'completed': 
+        statusMessage = 'Serviço concluído! Clique aqui para avaliar o atendimento.';
+        notificationLink = `/minhas-solicitacoes?review=${requestId}`;
+        break;
+      case 'rejected': 
+        statusMessage = 'Seu pedido foi recusado pelo prestador.'; 
+        break;
+      default: 
+        statusMessage = `O status do seu pedido mudou para: ${status}`;
     }
 
     await this.notificationsService.create(
       updated.customerId,
       'request_update',
-      'Atualização no Pedido',
+      status === 'completed' ? 'Serviço Concluído! 🌟' : 'Atualização no Pedido', 
       statusMessage,
-      '/minhas-solicitacoes'
+      notificationLink 
     );
 
     return updated;
