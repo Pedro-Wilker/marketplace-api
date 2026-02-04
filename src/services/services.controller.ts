@@ -1,52 +1,35 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, UseInterceptors, UploadedFiles, Query, NotFoundException, Patch } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, NotFoundException, Patch, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
+// Removi FilesInterceptor pois o upload agora é feito via UploadController
 import { ServicesService } from './services.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { UploadService } from 'src/upload/upload.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 
-@ApiTags('Serviços (Profissionais)')
+@ApiTags('Serviços')
 @Controller('services')
 export class ServicesController {
   constructor(
-    private readonly servicesService: ServicesService,
-    private readonly uploadService: UploadService
+    private readonly servicesService: ServicesService
   ) { }
 
   @Post()
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('professional')
-  @UseInterceptors(FilesInterceptor('portfolio', 5))
-  @ApiOperation({ summary: 'Cadastrar serviço (Com Upload)' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      allOf: [
-        { $ref: '#/components/schemas/CreateServiceDto' },
-        {
-          type: 'object',
-          properties: {
-            portfolio: {
-              type: 'array',
-              items: { type: 'string', format: 'binary' },
-            },
-          },
-        },
-      ],
-    },
-  })
+  // CORREÇÃO 1: Adicionado 'merchant' e 'prefecture' para permitir acesso
+  @Roles('professional', 'merchant', 'prefecture') 
+  @ApiOperation({ summary: 'Cadastrar serviço' })
+  // CORREÇÃO 2: Aceita JSON, não mais multipart
+  @ApiBody({ type: CreateServiceDto }) 
   async create(
     @Req() req,
     @Body() dto: CreateServiceDto,
-    @UploadedFiles() files: Express.Multer.File[]
   ) {
-    const imageUrls = files?.length ? await this.uploadService.uploadMultipleImages(files) : [];
-
-    return this.servicesService.create(req.user.sub, dto, imageUrls);
+    // CORREÇÃO 3: Passamos o DTO direto. 
+    // Certifique-se que seu CreateServiceDto possui o campo 'imageUrl' opcional.
+    // O service deve pegar a imagem de dentro do DTO agora.
+    return this.servicesService.create(req.user.sub, dto);
   }
 
   @Get()
@@ -63,7 +46,8 @@ export class ServicesController {
   @Delete(':id')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('professional')
+  // CORREÇÃO: Permissões atualizadas aqui também
+  @Roles('professional', 'merchant', 'prefecture')
   @ApiOperation({ summary: 'Remover serviço' })
   remove(@Req() req, @Param('id') id: string) {
     return this.servicesService.remove(req.user.sub, id);
@@ -80,7 +64,8 @@ export class ServicesController {
   @Patch(':id')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('professional')
+  // CORREÇÃO: Permissões atualizadas aqui também
+  @Roles('professional', 'merchant', 'prefecture')
   @ApiOperation({ summary: 'Atualizar serviço' })
   async update(@Req() req, @Param('id') id: string, @Body() dto: Partial<CreateServiceDto>) {
     return this.servicesService.update(req.user.sub, id, dto);
