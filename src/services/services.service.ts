@@ -1,7 +1,7 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
-import { services, professionalProfiles, reviews } from '../db/schema';
+import { services, reviews } from '../db/schema'; 
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { CreateServiceDto } from './dto/create-service.dto';
 
@@ -11,17 +11,9 @@ export class ServicesService {
     @Inject('DRIZZLE') private readonly db: NodePgDatabase<typeof schema>,
   ) { }
 
-  async create(userId: string, data: CreateServiceDto, portfolioImages: string[] = []) {
-    const [profile] = await this.db
-      .select()
-      .from(professionalProfiles)
-      .where(eq(professionalProfiles.userId, userId))
-      .limit(1);
-
-    if (!profile) {
-      throw new BadRequestException('Você precisa ser um profissional para criar serviços.');
-    }
-
+  async create(userId: string, data: CreateServiceDto) {
+    
+ 
     const [newService] = await this.db
       .insert(services)
       .values({
@@ -32,6 +24,7 @@ export class ServicesService {
         price: data.price?.toString(),
         estimatedDuration: data.estimatedDuration,
         categoryId: data.categoryId,
+       image: data.imageUrl, 
       })
       .returning();
 
@@ -39,6 +32,7 @@ export class ServicesService {
   }
 
   async findAll(filters?: { professionalId?: string; categoryId?: string }) {
+    // Adicionei .select() explícito para garantir que a imagem venha
     const query = this.db.select().from(services);
 
     if (filters?.professionalId) {
@@ -60,6 +54,7 @@ export class ServicesService {
         description: services.description,
         categoryId: services.categoryId,
         price: services.price,
+        image: services.image, // <--- Incluindo imagem na listagem
         avgRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
         reviewCount: sql<number>`COUNT(${reviews.id})`,
       })
@@ -86,6 +81,7 @@ export class ServicesService {
   }
 
   async update(userId: string, serviceId: string, data: Partial<CreateServiceDto>) {
+    // Verificação de existência
     const [service] = await this.db
       .select()
       .from(services)
@@ -105,6 +101,7 @@ export class ServicesService {
         price: data.price?.toString(),
         estimatedDuration: data.estimatedDuration,
         categoryId: data.categoryId,
+        image: data.imageUrl, 
       })
       .where(eq(services.id, serviceId))
       .returning();

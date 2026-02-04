@@ -146,13 +146,16 @@ export const products = pgTable('products', {
 
 export const services = pgTable('services', {
   id: uuid('id').primaryKey().defaultRandom(),
-  professionalId: uuid('professional_id').notNull().references(() => professionalProfiles.userId),
+  professionalId: uuid('professional_id').notNull().references(() => users.id),
+  
   name: text('name').notNull(),
   description: text('description'),
   priceType: priceTypeEnum('price_type').notNull(),
   price: decimal('price', { precision: 10, scale: 2 }),
   estimatedDuration: integer('estimated_duration'),
   categoryId: uuid('category_id').references(() => categories.id),
+
+  image: text('image'),
 });
 
 export const addresses = pgTable('addresses', {
