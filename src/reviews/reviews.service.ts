@@ -91,4 +91,19 @@ export class ReviewsService {
     
     return result || { average: 0, count: 0 };
   }
+
+  async findAllByService(serviceId: string) {
+  return await this.db
+    .select({
+      id: reviews.id,
+      rating: reviews.rating,
+      comment: reviews.comment,
+      createdAt: reviews.createdAt,
+      authorName: users.name, 
+    })
+    .from(reviews)
+    .innerJoin(users, eq(reviews.authorId, users.id))
+    .where(eq(reviews.serviceId, serviceId))
+    .orderBy(desc(reviews.createdAt));
+}
 }

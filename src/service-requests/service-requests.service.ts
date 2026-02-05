@@ -95,7 +95,7 @@ export class ServiceRequestsService {
       .returning();
 
     let statusMessage = '';
-    let notificationLink = '/dashboard/meus-pedidos'; 
+    let notificationLink = '/minhas-solicitacoes'; 
     switch (status) {
       case 'accepted': 
         statusMessage = 'Seu pedido foi aceito e está em andamento.'; 
