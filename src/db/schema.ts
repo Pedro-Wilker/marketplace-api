@@ -8,7 +8,7 @@ import {
   integer,
   jsonb,
   pgEnum,
-  index, 
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -32,17 +32,17 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   phone: text('phone'),
   cpfCnpj: text('cpf_cnpj').unique(),
-  
+  avatar: text('avatar'),
   city: text('city'),
-  state: text('state'), 
+  state: text('state'),
 
   type: userTypeEnum('type').notNull(),
   isVerified: boolean('is_verified').default(false),
   isActive: boolean('is_active').default(true),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-  deletedAt: timestamp('deleted_at', { withTimezone: true }), 
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 }, (table) => {
   return {
     emailIdx: index('email_idx').on(table.email),
@@ -55,10 +55,10 @@ export const reviews = pgTable('reviews', {
   serviceId: uuid('service_id').references(() => services.id).notNull(),
   authorId: uuid('author_id').references(() => users.id).notNull(),
   requestId: uuid('request_id').references(() => serviceRequests.id), // Opcional, mas bom para validação
-  
-  rating: integer('rating').notNull(), 
+
+  rating: integer('rating').notNull(),
   comment: text('comment'),
-  
+
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -66,20 +66,20 @@ export const reviews = pgTable('reviews', {
 
 export const serviceRequests = pgTable('service_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
-  customerId: uuid('customer_id').references(() => users.id).notNull(), 
-  serviceId: uuid('service_id').references(() => services.id).notNull(), 
-  providerId: uuid('provider_id').references(() => users.id).notNull(), 
-  
+  customerId: uuid('customer_id').references(() => users.id).notNull(),
+  serviceId: uuid('service_id').references(() => services.id).notNull(),
+  providerId: uuid('provider_id').references(() => users.id).notNull(),
+
   status: text('status', { enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled'] }).default('pending').notNull(),
   customerNote: text('customer_note'),
-  
+
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at'),
 });
 
 export const customerProfiles = pgTable('customer_profiles', {
-  
-  userId: uuid('user_id').primaryKey().references(() => users.id), 
+
+  userId: uuid('user_id').primaryKey().references(() => users.id),
   preferences: jsonb('preferences'),
 });
 
@@ -91,7 +91,7 @@ export const categories = pgTable('categories', {
 });
 
 export const merchantProfiles = pgTable('merchant_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => users.id), 
+  userId: uuid('user_id').primaryKey().references(() => users.id),
   businessName: text('business_name').notNull(),
   cnpj: text('cnpj'),
   categoryId: uuid('category_id').references(() => categories.id),
@@ -104,14 +104,14 @@ export const merchantProfiles = pgTable('merchant_profiles', {
 
 
 export const professionalProfiles = pgTable('professional_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => users.id), 
+  userId: uuid('user_id').primaryKey().references(() => users.id),
   categories: text('categories').array(),
   serviceRadiusKm: integer('service_radius_km'),
   portfolio: jsonb('portfolio'),
 });
 
 export const prefectureProfiles = pgTable('prefecture_profiles', {
-  userId: uuid('user_id').primaryKey().references(() => users.id), 
+  userId: uuid('user_id').primaryKey().references(() => users.id),
   officialName: text('official_name').notNull(),
   cnpj: text('cnpj').notNull(),
   addressStreet: text('address_street').notNull(),
@@ -147,7 +147,7 @@ export const products = pgTable('products', {
 export const services = pgTable('services', {
   id: uuid('id').primaryKey().defaultRandom(),
   professionalId: uuid('professional_id').notNull().references(() => users.id),
-  
+
   name: text('name').notNull(),
   description: text('description'),
   priceType: priceTypeEnum('price_type').notNull(),
@@ -162,7 +162,7 @@ export const addresses = pgTable('addresses', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id')
     .notNull()
-    .references(() => users.id), 
+    .references(() => users.id),
   street: text('street').notNull(),
   number: text('number'),
   complement: text('complement'),
@@ -192,7 +192,7 @@ export const orders = pgTable('orders', {
 
 export const orderItems = pgTable('order_items', {
   id: uuid('id').primaryKey().defaultRandom(),
-   orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   productId: uuid('product_id').notNull().references(() => products.id),
   quantity: integer('quantity').notNull(),
   priceUnit: decimal('price_unit', { precision: 10, scale: 2 }).notNull(),
@@ -200,8 +200,8 @@ export const orderItems = pgTable('order_items', {
 
 export const messages = pgTable('messages', {
   id: uuid('id').defaultRandom().primaryKey(),
-  requestId: uuid('request_id').references(() => serviceRequests.id).notNull(), 
-  senderId: uuid('sender_id').references(() => users.id).notNull(), 
+  requestId: uuid('request_id').references(() => serviceRequests.id).notNull(),
+  senderId: uuid('sender_id').references(() => users.id).notNull(),
   content: text('content').notNull(),
   read: boolean('read').default(false),
   createdAt: timestamp('created_at').defaultNow(),
