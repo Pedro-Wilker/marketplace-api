@@ -7,6 +7,9 @@ const UpdateUserSchema = z.object({
   cpfCnpj: z.string().optional(),
   city: z.string().optional(),
   state: z.string().length(2).optional(),
+  
+  // 👇 ADICIONE ISTO:
+  avatar: z.string().optional().describe('URL da foto de perfil'),
 });
 
 export class UpdateUserDto extends createZodDto(UpdateUserSchema) {}

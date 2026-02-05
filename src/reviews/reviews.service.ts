@@ -1,7 +1,7 @@
 import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
-import { reviews, serviceRequests, services, users } from '../db/schema'; // Adicione services e users
+import { reviews, serviceRequests, services, users } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -73,6 +73,8 @@ export class ReviewsService {
         comment: reviews.comment,
         createdAt: reviews.createdAt,
         authorName: users.name,
+   
+        authorAvatar: users.avatar, 
       })
       .from(reviews)
       .innerJoin(users, eq(reviews.authorId, users.id))
@@ -93,17 +95,6 @@ export class ReviewsService {
   }
 
   async findAllByService(serviceId: string) {
-  return await this.db
-    .select({
-      id: reviews.id,
-      rating: reviews.rating,
-      comment: reviews.comment,
-      createdAt: reviews.createdAt,
-      authorName: users.name, 
-    })
-    .from(reviews)
-    .innerJoin(users, eq(reviews.authorId, users.id))
-    .where(eq(reviews.serviceId, serviceId))
-    .orderBy(desc(reviews.createdAt));
-}
+    return this.findByService(serviceId); 
+  }
 }
