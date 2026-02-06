@@ -8,8 +8,8 @@ const UpdateUserSchema = z.object({
   city: z.string().optional(),
   state: z.string().length(2).optional(),
   
-  // 👇 ADICIONE ISTO:
   avatar: z.string().optional().describe('URL da foto de perfil'),
+  bio: z.string().max(500).optional().describe('Biografia ou descrição curta'),
 });
 
 export class UpdateUserDto extends createZodDto(UpdateUserSchema) {}

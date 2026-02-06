@@ -35,6 +35,7 @@ export const users = pgTable('users', {
   avatar: text('avatar'),
   city: text('city'),
   state: text('state'),
+  bio: text('bio'),
 
   type: userTypeEnum('type').notNull(),
   isVerified: boolean('is_verified').default(false),
@@ -85,7 +86,7 @@ export const customerProfiles = pgTable('customer_profiles', {
 
 export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
+  name: text('name').notNull().unique(),
   parentId: uuid('parent_id').references(() => categories.id),
   type: text('type').notNull(),
 });

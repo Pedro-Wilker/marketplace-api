@@ -31,16 +31,22 @@ export class UsersService {
       .offset(offset);
   }
 
-  async findOne(id: string): Promise<User | null> {
+  async findOne(id: string): Promise<Partial<User> | null> {
     const [user] = await this.db
-      .select()
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        phone: users.phone,
+        avatar: users.avatar,
+        city: users.city,
+        state: users.state,
+        bio: users.bio,
+        type: users.type,
+        createdAt: users.createdAt
+      })
       .from(users)
-      .where(
-        and(
-          eq(users.id, id),
-          isNull(users.deletedAt)
-        )
-      )
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
       .limit(1);
 
     return user ?? null;
