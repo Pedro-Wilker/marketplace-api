@@ -25,8 +25,6 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 @ApiTags('Produtos')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
   constructor(
@@ -35,7 +33,7 @@ export class ProductsController {
   ) { }
 
   @Get()
-  @ApiOperation({ summary: 'Listar produtos com filtros' })
+  @ApiOperation({ summary: 'Listar produtos com filtros (Público)' })
   @ApiQuery({ name: 'merchantId', required: false })
   @ApiQuery({ name: 'categoryId', required: false })
   @ApiQuery({ name: 'isAvailable', required: false, type: Boolean })
@@ -56,7 +54,7 @@ export class ProductsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Detalhes de um produto' })
+  @ApiOperation({ summary: 'Detalhes de um produto (Público)' })
   async findOne(@Param('id') id: string) {
     const product = await this.productsService.findOne(id);
     if (!product) throw new NotFoundException('Produto não encontrado');
@@ -64,7 +62,8 @@ export class ProductsController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard) 
+  @ApiBearerAuth('JWT-auth')
   @Roles('merchant')
   @UseInterceptors(FilesInterceptor('images', 10))
   @ApiOperation({ summary: 'Criar produto (Com Upload)' })
@@ -106,7 +105,8 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  @UseGuards(ProductOwnershipGuard)
+  @UseGuards(JwtAuthGuard, ProductOwnershipGuard) 
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Atualizar produto' })
   async update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
     const dataToUpdate = {
@@ -121,7 +121,8 @@ export class ProductsController {
   }
 
   @Delete(':id')
-  @UseGuards(ProductOwnershipGuard)
+  @UseGuards(JwtAuthGuard, ProductOwnershipGuard) 
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Remover produto' })
   async remove(@Param('id') id: string) {
     const deleted = await this.productsService.remove(id);

@@ -9,26 +9,25 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('Categorias') 
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth('JWT-auth')
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) { }
 
   @Get()
-  @ApiOperation({ summary: 'Listar todas as categorias' })
+  @ApiOperation({ summary: 'Listar todas as categorias (Público)' })
   findAll() {
     return this.categoriesService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Buscar categoria por ID' })
+  @ApiOperation({ summary: 'Buscar categoria por ID (Público)' })
   findOne(@Param('id') id: string) {
     return this.categoriesService.findOne(id);
   }
 
   @Post()
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard) 
+  @ApiBearerAuth('JWT-auth')
   @Roles('merchant', 'admin') 
   @ApiOperation({ summary: 'Criar nova categoria' })
   create(@Body() createCategoryDto: CreateCategoryDto) {
@@ -36,7 +35,8 @@ export class CategoriesController {
   }
 
   @Patch(':id')
- @UseGuards(RolesGuard) 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT-auth')
   @Roles('admin')
   @ApiOperation({ summary: 'Atualizar categoria' })
   update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
@@ -44,7 +44,8 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard) 
+  @ApiBearerAuth('JWT-auth')
   @Roles('admin')
   @ApiOperation({ summary: 'Remover categoria' })
   remove(@Param('id') id: string) {

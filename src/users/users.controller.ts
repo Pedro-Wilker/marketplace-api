@@ -39,16 +39,12 @@ export class UsersController {
     };
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @Get()
+   @Get()
   @ApiOperation({ summary: 'Listar usuários' })
   async findAll() {
     return this.usersService.findAll();
   }
 
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
   @Get(':id')
   @ApiOperation({ summary: 'Buscar usuário por ID' })
   async findOne(@Param('id') id: string) {
@@ -69,7 +65,7 @@ export class UsersController {
   @ApiBearerAuth('JWT-auth')
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar usuário' })
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) { // Use o DTO
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     const updated = await this.usersService.update(id, updateUserDto);
     if (!updated) {
       throw new NotFoundException('Usuário não encontrado');
@@ -89,7 +85,7 @@ export class UsersController {
     return { message: 'Usuário desativado com sucesso' };
   }
 
-  @Get('prefecture/search')
+   @Get('prefecture/search')
   @ApiOperation({ summary: 'Buscar dados da prefeitura por cidade' })
   async findPrefectureByCity(@Query('city') city: string) {
     if (!city) throw new NotFoundException('Cidade é obrigatória');
@@ -97,7 +93,6 @@ export class UsersController {
     const prefecture = await this.usersService.findPrefectureByCity(city);
     
     if (!prefecture) {
- 
       return null; 
     }
     return prefecture;
@@ -135,5 +130,4 @@ export class UsersController {
   async updatePrefectureProfile(@Req() req, @Body() dto: UpdatePrefectureDto) {
     return this.usersService.updatePrefectureProfile(req.user.sub, dto);
   }
-
 }
