@@ -8,7 +8,16 @@ import { ZodValidationPipe } from 'nestjs-zod';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.use(helmet());
+  /* app.use(helmet()); */
+  app.use(helmet({
+    contentSecurityPolicy: false, // Desativa o CSP para facilitar o teste local
+  }));
+
+  /*   app.enableCors({
+      origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    }); */
+
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',

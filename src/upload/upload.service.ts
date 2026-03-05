@@ -1,49 +1,37 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary } from 'cloudinary';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class UploadService {
+  // O process.cwd() garante que a pasta 'uploads' fique na raiz do projeto ~/apps/marketplace-api/uploads
+  private readonly uploadPath = path.join(process.cwd(), 'uploads');
+
   constructor(private configService: ConfigService) {
-    cloudinary.config({
-      cloud_name: this.configService.get<string>('CLOUDINARY_CLOUD_NAME'),
-      api_key: this.configService.get<string>('CLOUDINARY_API_KEY'),
-      api_secret: this.configService.get<string>('CLOUDINARY_API_SECRET'),
-    });
+    if (!fs.existsSync(this.uploadPath)) {
+      fs.mkdirSync(this.uploadPath, { recursive: true });
+    }
   }
 
   async uploadImage(file: Express.Multer.File): Promise<string> {
-   const { fileTypeFromBuffer } = await import('file-type');
-    
-    const type = await fileTypeFromBuffer(file.buffer);
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
-    
-    if (!type || !allowedMimes.includes(type.mime)) {
-      throw new BadRequestException('Arquivo inválido ou corrompido. Apenas JPG, PNG e WebP são permitidos.');
-    }
+    if (!file) throw new BadRequestException('Arquivo não fornecido');
 
-    return new Promise((resolve, reject) => {
-      const upload = cloudinary.uploader.upload_stream(
-        {
-          folder: this.configService.get<string>('CLOUDINARY_FOLDER') || 'marketplace',
-          resource_type: 'image',
-          public_id: `${Date.now()}-${Math.round(Math.random() * 1e9)}`,
-        },
-        (error, result) => {
-          if (error) return reject(new BadRequestException('Erro no upload para nuvem'));
-          if (!result) return reject(new Error('Upload falhou sem resposta'));
-          resolve(result.secure_url);
-        },
-      );
-      upload.end(file.buffer);
-    });
+    const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+    const fullPath = path.join(this.uploadPath, fileName);
+
+    try {
+      fs.writeFileSync(fullPath, file.buffer);
+      
+      // Busca a APP_URL do seu .env (ex: http://localhost:3000 ou https://api.artonbyte.com.br)
+      const baseUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
+      return `${baseUrl.replace(/\/$/, '')}/uploads/${fileName}`;
+    } catch (error) {
+      throw new BadRequestException('Erro ao salvar arquivo no servidor local');
+    }
   }
 
   async uploadMultipleImages(files: Express.Multer.File[]): Promise<string[]> {
-    const urls: string[] = [];
-     for (const file of files) {
-      urls.push(await this.uploadImage(file));
-    }
-    return urls;
+    return Promise.all(files.map(file => this.uploadImage(file)));
   }
 }
