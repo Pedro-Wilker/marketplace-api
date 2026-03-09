@@ -1,5 +1,6 @@
-import { CreateProductDto } from './create-product.dto';
-import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
+import { CreateProductSchema } from './create-product.dto';
 
-export const UpdateProductDto = CreateProductDto.partial(); 
-export type UpdateProductDto = z.infer<typeof UpdateProductDto>;
+const UpdateProductSchema = CreateProductSchema.partial(); 
+
+export class UpdateProductDto extends createZodDto(UpdateProductSchema) {}

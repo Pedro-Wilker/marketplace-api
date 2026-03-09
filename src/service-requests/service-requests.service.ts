@@ -30,15 +30,23 @@ export class ServiceRequestsService {
         serviceId: data.serviceId,
         providerId: service.professionalId,
         customerNote: data.customerNote,
+        
+        customAnswers: data.customAnswers || null,
+        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
+        
         status: 'pending'
       })
       .returning();
+
+    const dataAgendada = data.scheduledDate 
+      ? ` Agendado para: ${new Date(data.scheduledDate).toLocaleDateString('pt-BR')}.` 
+      : '';
 
     await this.notificationsService.create(
       request.providerId,
       'request_new',
       'Nova Solicitação!',
-      `Você recebeu um novo pedido para o serviço: ${service.name}.`,
+      `Você recebeu um novo pedido para o serviço: ${service.name}.${dataAgendada}`,
       '/dashboard/solicitacoes' 
     );
 
@@ -51,6 +59,10 @@ export class ServiceRequestsService {
         id: serviceRequests.id,
         status: serviceRequests.status,
         customerNote: serviceRequests.customerNote,
+        
+        customAnswers: serviceRequests.customAnswers,
+        scheduledDate: serviceRequests.scheduledDate,
+        
         createdAt: serviceRequests.createdAt,
         updatedAt: serviceRequests.updatedAt,
 
@@ -128,9 +140,12 @@ export class ServiceRequestsService {
         id: serviceRequests.id,
         serviceId: serviceRequests.serviceId,
         providerId: serviceRequests.providerId,
-
         status: serviceRequests.status,
         customerNote: serviceRequests.customerNote,
+        
+        customAnswers: serviceRequests.customAnswers,
+        scheduledDate: serviceRequests.scheduledDate,
+
         createdAt: serviceRequests.createdAt,
         serviceName: services.name,
         providerName: users.name,

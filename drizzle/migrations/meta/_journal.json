@@ -50,6 +50,13 @@
       "when": 1769705390919,
       "tag": "0006_lyrical_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773001013947,
+      "tag": "0007_adorable_squadron_sinister",
+      "breakpoints": true
     }
   ]
 }

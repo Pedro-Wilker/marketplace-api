@@ -1,8 +1,8 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
-import { services, reviews } from '../db/schema'; 
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { services, reviews, serviceFormFields } from '../db/schema';
+import { eq, and, sql, desc, SQL } from 'drizzle-orm';
 import { CreateServiceDto } from './dto/create-service.dto';
 
 @Injectable()
@@ -12,38 +12,64 @@ export class ServicesService {
   ) { }
 
   async create(userId: string, data: CreateServiceDto) {
-    
- 
-    const [newService] = await this.db
-      .insert(services)
-      .values({
-        professionalId: userId,
-        name: data.name,
-        description: data.description,
-        priceType: data.priceType,
-        price: data.price?.toString(),
-        estimatedDuration: data.estimatedDuration,
-        categoryId: data.categoryId,
-       image: data.imageUrl, 
-      })
-      .returning();
+    return await this.db.transaction(async (tx) => {
 
-    return newService;
+      const [newService] = await tx
+        .insert(services)
+        .values({
+          professionalId: userId,
+          name: data.name,
+          description: data.description,
+          priceType: data.priceType,
+          price: data.price?.toString(),
+          estimatedDuration: data.estimatedDuration,
+          categoryId: data.categoryId,
+          image: data.imageUrl,
+          requiresCustomForm: data.requiresCustomForm || false,
+        })
+        .returning();
+
+      if (data.requiresCustomForm && data.formFields && data.formFields.length > 0) {
+        const fieldsToInsert = data.formFields.map((field) => ({
+          serviceId: newService.id,
+          label: field.label,
+          type: field.type,
+          isRequired: field.isRequired,
+          options: field.options || null,
+          orderIndex: field.orderIndex,
+        }));
+
+        await tx.insert(serviceFormFields).values(fieldsToInsert);
+      }
+
+      const completeService = await tx.query.services.findFirst({
+        where: eq(services.id, newService.id),
+        with: {
+          formFields: true,
+        }
+      });
+
+      return completeService;
+    });
   }
 
   async findAll(filters?: { professionalId?: string; categoryId?: string }) {
-    // Adicionei .select() explícito para garantir que a imagem venha
-    const query = this.db.select().from(services);
+    const conditions: SQL<unknown>[] = [];
 
     if (filters?.professionalId) {
-      query.where(eq(services.professionalId, filters.professionalId));
+      conditions.push(eq(services.professionalId, filters.professionalId));
     }
 
     if (filters?.categoryId) {
-      query.where(eq(services.categoryId, filters.categoryId));
+      conditions.push(eq(services.categoryId, filters.categoryId));
     }
 
-    return await query;
+    return await this.db.query.services.findMany({
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      with: {
+        formFields: true 
+      }
+    });
   }
 
   async findFeatured() {
@@ -54,7 +80,7 @@ export class ServicesService {
         description: services.description,
         categoryId: services.categoryId,
         price: services.price,
-        image: services.image, // <--- Incluindo imagem na listagem
+        image: services.image,
         avgRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
         reviewCount: sql<number>`COUNT(${reviews.id})`,
       })
@@ -62,12 +88,19 @@ export class ServicesService {
       .leftJoin(reviews, eq(services.id, reviews.serviceId))
       .groupBy(services.id)
       .orderBy(desc(sql`COALESCE(AVG(${reviews.rating}), 0)`))
-      .limit(4); 
+      .limit(4);
   }
 
   async findOne(id: string) {
-    const [service] = await this.db.select().from(services).where(eq(services.id, id)).limit(1);
-    return service || null;
+    const service = await this.db.query.services.findFirst({
+      where: eq(services.id, id),
+      with: {
+        formFields: true
+      }
+    });
+
+    if (!service) throw new NotFoundException('Serviço não encontrado');
+    return service;
   }
 
   async remove(userId: string, serviceId: string) {
@@ -77,11 +110,11 @@ export class ServicesService {
       .returning();
 
     if (result.length === 0) throw new NotFoundException('Serviço não encontrado ou acesso negado');
-    return { message: 'Serviço removido' };
+    return { message: 'Serviço removido com sucesso' };
   }
 
   async update(userId: string, serviceId: string, data: Partial<CreateServiceDto>) {
-    // Verificação de existência
+
     const [service] = await this.db
       .select()
       .from(services)
@@ -92,20 +125,38 @@ export class ServicesService {
       throw new NotFoundException('Serviço não encontrado ou você não tem permissão para editá-lo.');
     }
 
-    const [updatedService] = await this.db
-      .update(services)
-      .set({
-        name: data.name,
-        description: data.description,
-        priceType: data.priceType,
-        price: data.price?.toString(),
-        estimatedDuration: data.estimatedDuration,
-        categoryId: data.categoryId,
-        image: data.imageUrl, 
-      })
-      .where(eq(services.id, serviceId))
-      .returning();
+    return await this.db.transaction(async (tx) => {
 
-    return updatedService;
+      const [updatedService] = await tx
+        .update(services)
+        .set({
+          name: data.name,
+          description: data.description,
+          priceType: data.priceType,
+          price: data.price?.toString(),
+          estimatedDuration: data.estimatedDuration,
+          categoryId: data.categoryId,
+          image: data.imageUrl,
+          requiresCustomForm: data.requiresCustomForm !== undefined ? data.requiresCustomForm : service.requiresCustomForm,
+        })
+        .where(eq(services.id, serviceId))
+        .returning();
+
+      if (data.formFields && data.requiresCustomForm) {
+        await tx.delete(serviceFormFields).where(eq(serviceFormFields.serviceId, serviceId));
+
+        const fieldsToInsert = data.formFields.map((field) => ({
+          serviceId: serviceId,
+          label: field.label,
+          type: field.type,
+          isRequired: field.isRequired,
+          options: field.options || null,
+          orderIndex: field.orderIndex,
+        }));
+        await tx.insert(serviceFormFields).values(fieldsToInsert);
+      }
+
+      return updatedService;
+    });
   }
 }
