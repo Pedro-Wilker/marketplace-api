@@ -12,7 +12,7 @@ export class ReviewsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Criar avaliação' })
+  @ApiOperation({ summary: 'Criar avaliação (Serviço, Loja, Produto ou Entregador)' })
   create(@Req() req, @Body() dto: CreateReviewDto) {
     return this.reviewsService.create(req.user.sub, dto);
   }
@@ -20,8 +20,24 @@ export class ReviewsController {
   @Get('service/:serviceId')
   @ApiOperation({ summary: 'Listar avaliações de um serviço' })
   findByService(@Param('serviceId') serviceId: string) {
-    return this.reviewsService.findByService(serviceId);
+    return this.reviewsService.findByTarget('serviceId', serviceId);
   }
 
-  
+  @Get('merchant/:merchantId')
+  @ApiOperation({ summary: 'Listar avaliações de uma loja' })
+  findByMerchant(@Param('merchantId') merchantId: string) {
+    return this.reviewsService.findByTarget('merchantId', merchantId);
+  }
+
+  @Get('driver/:driverId')
+  @ApiOperation({ summary: 'Listar avaliações de um motorista' })
+  findByDriver(@Param('driverId') driverId: string) {
+    return this.reviewsService.findByTarget('driverId', driverId);
+  }
+
+  @Get('product/:productId')
+  @ApiOperation({ summary: 'Listar avaliações de um produto' })
+  findByProduct(@Param('productId') productId: string) {
+    return this.reviewsService.findByTarget('productId', productId);
+  }
 }

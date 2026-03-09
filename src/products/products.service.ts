@@ -58,6 +58,7 @@ export class ProductsService {
       .values({
         ...data,
         images: data.images || [],
+        options: data.options || null, // NOVO: Garante que as opções (JSONB) sejam salvas
       })
       .returning();
 
@@ -71,7 +72,10 @@ export class ProductsService {
   async update(id: string, data: Partial<NewProduct>): Promise<Product | null> {
     const [updatedProduct] = await this.db
       .update(products)
-      .set(data)
+      .set({
+          ...data,
+          // Se as options forem passadas na edição, elas sobrescrevem as antigas
+      })
       .where(eq(products.id, id))
       .returning();
 

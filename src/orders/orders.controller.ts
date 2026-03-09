@@ -1,10 +1,10 @@
-import { Controller, Post, Body, UseGuards, Req, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Get, Patch, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
 
-@ApiTags('Pedidos')
+@ApiTags('Pedidos (E-commerce)')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('orders')
@@ -27,5 +27,15 @@ export class OrdersController {
   @ApiOperation({ summary: 'Listar vendas da loja (Merchant)' })
   async findMerchantOrders(@Req() req) {
     return this.ordersService.findAllByUser(req.user.sub, 'merchant');
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Atualizar status do pedido (Loja ou Entregador)' })
+  async updateStatus(
+    @Req() req, 
+    @Param('id') id: string, 
+    @Body('status') status: 'confirmed' | 'preparing' | 'ready_for_pickup' | 'on_the_way' | 'delivered' | 'cancelled'
+  ) {
+    return this.ordersService.updateStatus(id, status);
   }
 }
