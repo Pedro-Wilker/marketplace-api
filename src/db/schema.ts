@@ -46,6 +46,9 @@ export const reportStatusEnum = pgEnum('report_status', ['reported', 'in_progres
 export const discountTypeEnum = pgEnum('discount_type', ['percentage', 'fixed']);
 export const favoriteTypeEnum = pgEnum('favorite_type', ['merchant', 'professional', 'service', 'product']);
 
+
+export const messageTypeEnum = pgEnum('message_type', ['text', 'image', 'file', 'system']);
+
 // ============================================================================
 // 2. TABELAS BASE (USUÁRIOS E CATEGORIAS)
 // ============================================================================
@@ -363,7 +366,9 @@ export const messages = pgTable('messages', {
   id: uuid('id').defaultRandom().primaryKey(),
   requestId: uuid('request_id').references(() => serviceRequests.id).notNull(),
   senderId: uuid('sender_id').references(() => users.id).notNull(),
-  content: text('content').notNull(),
+  type: messageTypeEnum('type').default('text').notNull(),
+  content: text('content').notNull(), 
+  fileMeta: jsonb('file_meta'),
   read: boolean('read').default(false),
   createdAt: timestamp('created_at').defaultNow(),
 });
