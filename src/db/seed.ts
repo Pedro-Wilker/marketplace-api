@@ -2,118 +2,128 @@ import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
-import * as bcrypt from 'bcrypt';
+import { eq } from 'drizzle-orm';
+import { hash } from 'bcrypt';
 
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL não definida');
+if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is missing');
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema });
 
+const CITIES = [
+  { name: 'Piritiba', state: 'BA', zip: '44830-000', email: 'contato@piritiba.ba.gov.br', cnpj: '13.913.987/0001-01', coords: '-11.7297,-40.5489', phone: '(74) 3628-2153', address: 'Rua Francisco José de Souza, 15' },
+  { name: 'Itaberaba', state: 'BA', zip: '46880-000', email: 'contato@itaberaba.ba.gov.br', cnpj: '13.913.987/0001-02', coords: '-12.5269,-40.2922', phone: '(75) 3251-1925', address: 'Av. Rio Branco, 617 - Centro' },
+  { name: 'Miguel Calmon', state: 'BA', zip: '44720-000', email: 'contato@miguelcalmon.ba.gov.br', cnpj: '13.913.987/0001-03', coords: '-11.4283,-40.5956', phone: '(74) 3627-2121', address: 'Praça Lauro de Freitas, S/N' },
+  { name: 'Bonito', state: 'BA', zip: '44800-000', email: 'contato@bonito.ba.gov.br', cnpj: '13.913.987/0001-04', coords: '-11.9631,-41.2658', phone: '(75) 3331-1010', address: 'Rua do Comércio, 22' },
+];
+
+const PUBLIC_CATEGORIES = ['Tributos', 'Saúde', 'Educação', 'Urbanismo', 'Trânsito', 'Documentos', 'Social'];
+
+const SERVICES_CATALOG = [
+  // TRIBUTOS
+  { name: '2ª Via do IPTU', desc: 'Emissão de guia para pagamento do imposto predial.', cat: 'Tributos' },
+  { name: 'Nota Fiscal Eletrônica (NFS-e)', desc: 'Portal para emissão de notas de serviço.', cat: 'Tributos' },
+  { name: 'Certidão Negativa de Débitos', desc: 'Documento que comprova regularidade com o município.', cat: 'Tributos' },
+  { name: 'Consulta de Débitos Mobiliários', desc: 'Verifique dívidas de taxas e licenças.', cat: 'Tributos' },
+
+  // SAÚDE
+  { name: 'Agendamento UBS', desc: 'Marque sua consulta na Unidade Básica de Saúde mais próxima.', cat: 'Saúde' },
+  { name: 'Solicitação de Medicamentos', desc: 'Consulte estoque e faça pedidos de remédios de uso contínuo.', cat: 'Saúde' },
+  { name: 'Vigilância Sanitária', desc: 'Solicite inspeções ou denuncie irregularidades.', cat: 'Saúde' },
+
+  // URBANISMO / ZELADORIA
+  { name: 'Reparo de Iluminação Pública', desc: 'Informe postes com lâmpadas apagadas ou piscando.', cat: 'Urbanismo' },
+  { name: 'Coleta de Entulho e Podas', desc: 'Solicite a retirada de resíduos volumosos.', cat: 'Urbanismo' },
+  { name: 'Tapa-Buraco e Pavimentação', desc: 'Solicite manutenção asfáltica em sua rua.', cat: 'Urbanismo' },
+  { name: 'Poda de Árvores em Áreas Públicas', desc: 'Solicite a manutenção de árvores na via pública.', cat: 'Urbanismo' },
+
+  // EDUCAÇÃO E SOCIAL
+  { name: 'Matrícula Escolar Online', desc: 'Inscrição para novos alunos na rede municipal.', cat: 'Educação' },
+  { name: 'Cesta Básica (Auxílio)', desc: 'Solicitação de assistência alimentar para famílias cadastradas.', cat: 'Social' },
+  { name: 'Cadastro Único (CadÚnico)', desc: 'Atualização e agendamento para benefícios federais/municipais.', cat: 'Social' },
+
+  // TRÂNSITO E DOCUMENTOS
+  { name: 'Recurso de Multas Municipais', desc: 'Defesa prévia para infrações ocorridas dentro da cidade.', cat: 'Trânsito' },
+  { name: 'Cartão de Estacionamento Idoso/PCD', desc: 'Solicite a credencial para uso de vagas especiais.', cat: 'Trânsito' }
+];
+
 async function seed() {
-  console.log('🚀 Iniciando Mega Seed Final: Bonito, Piritiba e Miguel Calmon...');
+  console.log('🌱 Populando base municipal com 16 serviços por prefeitura...');
 
-  // 1. CATEGORIAS
-  const categories = [
-    { name: 'Zeladoria e Obras', type: 'public' },
-    { name: 'Saúde e Bem Estar', type: 'public' },
-    { name: 'Educação Municipal', type: 'public' },
-    { name: 'Construção e Reformas', type: 'service' },
-    { name: 'Assistência Técnica', type: 'service' },
-    { name: 'Beleza e Estética', type: 'service' },
-    { name: 'Transporte', type: 'service' },
-    { name: 'Mercados', type: 'product' },
-    { name: 'Restaurantes', type: 'product' },
-    { name: 'Farmácias', type: 'product' }
-  ];
+  const passwordHash = await hash('Prefeitura123', 10);
+  const categoryIds = new Map<string, string>();
 
-  const catIds: Record<string, string> = {};
-  for (const cat of categories) {
-    const res = await db.insert(schema.categories)
-      .values({ name: cat.name, type: cat.type as any })
-      .onConflictDoUpdate({ target: schema.categories.name, set: { name: cat.name } })
+  // 1. Categorias
+  for (const catName of PUBLIC_CATEGORIES) {
+    const result = await db.insert(schema.categories)
+      .values({ name: catName, type: 'public' })
+      .onConflictDoUpdate({ target: schema.categories.name, set: { type: 'public' } })
       .returning();
-    catIds[cat.name] = res[0].id;
+
+    // Forçamos o TS a entender que é um array para acessar o índice [0]
+    const inserted = (result as any[])[0];
+
+    if (inserted) {
+      categoryIds.set(catName, inserted.id);
+    }
   }
 
-  const passwordHash = await bcrypt.hash('12345678', 10);
+  for (const city of CITIES) {
+    console.log(`\n🏗️ Gerando infraestrutura para: ${city.name}`);
 
-  const cities = [
-    { name: 'Bonito', prefEmail: 'contato@bonito.ba.gov.br' },
-    { name: 'Piritiba', prefEmail: 'contato@piritiba.ba.gov.br' },
-    { name: 'Miguel Calmon', prefEmail: 'contato@miguelcalmon.ba.gov.br' }
-  ];
-
-  for (const city of cities) {
-    console.log(`📍 Populando ${city.name}...`);
-
-    // A. Usuário Prefeitura
-    const [prefUser] = await db.insert(schema.users).values({
-      name: `Prefeitura de ${city.name}`,
-      email: city.prefEmail,
-      passwordHash,
-      type: 'prefecture',
-      city: city.name,
-      state: 'BA',
-      avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${city.name}`
-    })
-      .onConflictDoUpdate({ target: schema.users.email, set: { name: `Prefeitura de ${city.name}` } })
+    // 2. Usuário
+    const [user] = await db.insert(schema.users)
+      .values({
+        name: `Prefeitura de ${city.name}`,
+        email: city.email,
+        passwordHash,
+        type: 'prefecture',
+        isVerified: true,
+        phone: city.phone,
+        city: city.name,
+        state: city.state,
+        avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${city.name}`
+      })
+      .onConflictDoUpdate({ target: schema.users.email, set: { type: 'prefecture' } })
       .returning();
 
-    // B. Perfil da Prefeitura (Com campos obrigatórios)
+    // 3. Perfil de Prefeitura
     await db.insert(schema.prefectureProfiles).values({
-      userId: prefUser.id,
+      userId: user.id,
       officialName: `Prefeitura Municipal de ${city.name}`,
-      cnpj: `00.000.000/0001-${Math.floor(Math.random() * 90) + 10}`,
-      addressStreet: 'Praça da Matriz, s/n',
+      cnpj: city.cnpj,
+      addressStreet: city.address.split(',')[0],
+      addressNumber: city.address.split(',')[1]?.trim() || 'S/N',
       addressNeighborhood: 'Centro',
       addressCity: city.name,
-      addressState: 'BA',
-      addressZipCode: '46800-000',
-      institutionalEmail: city.prefEmail,
-      status: 'approved' // Valor correto aceito pelo schema
+      addressState: city.state,
+      addressZipCode: city.zip,
+      institutionalEmail: city.email,
+      mainPhone: city.phone,
+      status: 'approved'
     }).onConflictDoNothing();
 
-    // C. Anúncio de Boas-vindas
-    await db.insert(schema.announcements).values({
-      prefectureId: prefUser.id,
-      title: `Super App ${city.name} no ar!`,
-      content: `Cidadão, agora você pode solicitar serviços e apoiar o comércio local por aqui.`,
-      type: 'news',
-      targetCity: city.name,
-      isActive: true
-    });
+    // 4. Serviços (16 por cidade)
+    for (const s of SERVICES_CATALOG) {
+      await db.insert(schema.services).values({
+        professionalId: user.id,
+        categoryId: categoryIds.get(s.cat),
+        name: s.name,
+        description: `${s.desc} Portal oficial de ${city.name}.`,
+        priceType: 'negotiable', // 'negotiable' ou 'fixed' conforme seu schema
+        price: '0.00',
+        estimatedDuration: 0,
+      }).onConflictDoNothing();
+    }
 
-    // NOTA: Para encurtar e garantir que rode, adicionei apenas 1 profissional/loja por cidade
-    // D. Profissional de Exemplo
-    const [proUser] = await db.insert(schema.users).values({
-      name: `Pro ${city.name}`,
-      email: `pro_${city.name.toLowerCase()}@muni.com`,
-      passwordHash,
-      type: 'professional',
-      city: city.name,
-      state: 'BA'
-    })
-      .onConflictDoUpdate({ target: schema.users.email, set: { name: `Pro ${city.name}` } })
-      .returning();
-
-    await db.insert(schema.professionalProfiles).values({
-      userId: proUser.id,
-      categories: ['Construção e Reformas'],
-      serviceRadiusKm: 50
-    }).onConflictDoNothing();
-
-    await db.insert(schema.services).values({
-      name: `Serviço Geral em ${city.name}`,
-      price: "100",
-      priceType: 'fixed', 
-      categoryId: catIds['Construção e Reformas'],
-      professionalId: proUser.id,
-      description: "Serviço de teste do seed."
-    });
+    console.log(`✅ ${city.name} operacional com ${SERVICES_CATALOG.length} serviços.`);
   }
 
-  console.log('✅ Mega Seed concluído!');
+  console.log('\n🚀 Deploy de dados finalizado com sucesso!');
   process.exit(0);
 }
 
-seed().catch(e => { console.error('❌ Erro:', e); process.exit(1); });
+seed().catch((err) => {
+  console.error('❌ Erro crítico no seed:', err);
+  process.exit(1);
+});
