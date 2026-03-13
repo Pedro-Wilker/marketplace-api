@@ -1,4 +1,4 @@
-import 'dotenv/config'; 
+import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
@@ -12,12 +12,9 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema });
 
 async function seed() {
-  console.log('🚀 Iniciando Mega Seed: Bonito, Piritiba e Miguel Calmon...');
+  console.log('🚀 Iniciando Mega Seed Corrigido: Bonito, Piritiba e Miguel Calmon...');
 
-  // 1. LIMPEZA DE SEGURANÇA (Opcional - cuidado em produção)
-  // console.log('🧹 Limpando dados antigos...');
-
-  // 2. CATEGORIAS
+  // 1. CATEGORIAS
   const categories = [
     { name: 'Zeladoria e Obras', type: 'public' },
     { name: 'Saúde e Bem Estar', type: 'public' },
@@ -42,7 +39,7 @@ async function seed() {
 
   const passwordHash = await bcrypt.hash('12345678', 10);
 
-  // 3. ESTRUTURA DE DADOS POR CIDADE
+  // 2. ESTRUTURA DE DADOS POR CIDADE
   const cities = [
     {
       name: 'Bonito',
@@ -82,7 +79,7 @@ async function seed() {
   for (const city of cities) {
     console.log(`📍 Populando ${city.name}...`);
 
-    // A. Criar Prefeitura
+    // A. Criar Usuário Prefeitura
     const [prefUser] = await db.insert(schema.users).values({
       name: `Prefeitura de ${city.name}`,
       email: city.prefectureEmail,
@@ -92,6 +89,20 @@ async function seed() {
       state: 'BA',
       avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${city.name}`
     }).returning();
+
+    // CORREÇÃO: Criar Perfil da Prefeitura antes do Anúncio
+    await db.insert(schema.prefectureProfiles).values({
+      userId: prefUser.id,
+      officialName: `Prefeitura Municipal de ${city.name}`,
+      cnpj: `00.000.000/0001-${Math.floor(Math.random() * 90) + 10}`,
+      addressStreet: 'Praça da Matriz, s/n',
+      addressNeighborhood: 'Centro',
+      addressCity: city.name,
+      addressState: 'BA',
+      addressZipCode: '46800-000',
+      institutionalEmail: city.prefectureEmail,
+      status: 'approved', // 'approved' é o valor correto no seu schema
+    }).onConflictDoNothing();
 
     await db.insert(schema.announcements).values({
       prefectureId: prefUser.id,
@@ -114,7 +125,13 @@ async function seed() {
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`
       }).returning();
 
-      await db.insert(schema.professionalProfiles).values({ userId: u.id, categories: [p.cat] });
+      // Criar Perfil Profissional antes do Serviço
+      await db.insert(schema.professionalProfiles).values({
+        userId: u.id,
+        categories: [p.cat],
+        serviceRadiusKm: 50
+      }).onConflictDoNothing();
+
       await db.insert(schema.services).values({
         name: p.svc,
         price: p.price,
@@ -137,11 +154,12 @@ async function seed() {
         avatar: `https://api.dicebear.com/7.x/shapes/svg?seed=${m.name}`
       }).returning();
 
+      // Criar Perfil de Comerciante antes do Produto
       await db.insert(schema.merchantProfiles).values({
         userId: u.id,
         businessName: m.name,
         categoryId: catIds[m.cat]
-      });
+      }).onConflictDoNothing();
 
       for (const prod of m.prods) {
         await db.insert(schema.products).values({
@@ -155,8 +173,11 @@ async function seed() {
     }
   }
 
-  console.log('✅ Mega Seed concluído!');
+  console.log('✅ Mega Seed concluído com sucesso!');
   process.exit(0);
 }
 
-seed().catch(e => { console.error(e); process.exit(1); });
+seed().catch(e => {
+  console.error('❌ Erro no seed:', e);
+  process.exit(1);
+});
