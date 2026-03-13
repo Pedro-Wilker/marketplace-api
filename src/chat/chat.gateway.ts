@@ -24,7 +24,7 @@ export class ChatGateway implements OnGatewayConnection {
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async handleConnection(client: Socket) {
     try {
@@ -52,18 +52,18 @@ export class ChatGateway implements OnGatewayConnection {
   @SubscribeMessage('sendMessage')
   async handleMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { requestId: string; content: string },
+    @MessageBody() payload: { requestId: string; content: string; type?: string; fileMeta?: any },
   ) {
     const userId = client.data.user.sub;
-    
-    // Chama o serviço passando os nomes corretos
+
     const savedMessage = await this.chatService.saveMessage(
-      userId, 
-      payload.requestId, 
-      payload.content
+      userId,
+      payload.requestId,
+      payload.content,
+      payload.type as any || 'text',
+      payload.fileMeta
     );
 
-    // Emite para a sala requestId
     this.server.to(payload.requestId).emit('newMessage', savedMessage);
   }
 }

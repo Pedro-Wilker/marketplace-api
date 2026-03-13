@@ -12,13 +12,21 @@ export class ChatService {
     private readonly notificationsService: NotificationsService
   ) { }
 
-  async saveMessage(senderId: string, requestId: string, content: string) {
+  async saveMessage(
+    senderId: string,
+    requestId: string,
+    content: string,
+    type: 'text' | 'image' | 'file' | 'system' = 'text',
+    fileMeta?: any
+  ) {
     const [newMessage] = await this.db
       .insert(messages)
       .values({
         senderId,
         requestId,
         content,
+        type,
+        fileMeta,
       })
       .returning();
 
