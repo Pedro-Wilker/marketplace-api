@@ -13,7 +13,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { randomBytes } from 'crypto';
 import { UsersService } from '../users/users.service';
-import { MailService } from '../mail/mail.service'; 
+import { MailService } from '../mail/mail.service';
 
 type User = InferSelectModel<typeof users>;
 
@@ -64,7 +64,7 @@ export class AuthService {
     };
   }
 
-  async login(data: LoginDto): Promise<{ accessToken: string; refreshToken: string }> {
+  async login(data: LoginDto): Promise<{ user: Partial<User>; accessToken: string; refreshToken: string }> {
     const user = await this.db
       .select()
       .from(users)
@@ -78,7 +78,7 @@ export class AuthService {
     const [foundUser] = user;
 
     if (foundUser.deletedAt) {
-       throw new UnauthorizedException('Conta desativada');
+      throw new UnauthorizedException('Conta desativada');
     }
 
     const passwordValid = await compare(data.password, foundUser.passwordHash || '');
@@ -105,7 +105,18 @@ export class AuthService {
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
-    return { accessToken, refreshToken };
+    return {
+      user: {
+        id: foundUser.id,
+        name: foundUser.name,
+        email: foundUser.email,
+        type: foundUser.type,
+        city: foundUser.city,
+        state: foundUser.state
+      },
+      accessToken,
+      refreshToken
+    };
   }
 
   async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
@@ -134,7 +145,7 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token inválido ou revogado');
     }
 
-     const user = await this.usersService.findOne(payload.sub);
+    const user = await this.usersService.findOne(payload.sub);
     if (!user) throw new UnauthorizedException('Usuário não encontrado');
 
     const accessToken = this.jwtService.sign({
@@ -174,13 +185,13 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
-    
-     if (!user) {
+
+    if (!user) {
       return { message: 'Se o e-mail existir, você receberá um link.' };
     }
 
     const resetToken = randomBytes(32).toString('hex');
-   
+
     await this.mailService.sendPasswordResetEmail(user.email, resetToken);
 
     return { message: 'E-mail de recuperação enviado.' };
@@ -189,7 +200,7 @@ export class AuthService {
   async resetPassword(data: ResetPasswordDto): Promise<{ message: string }> {
     let payload: any;
     try {
-       payload = this.jwtService.verify(data.token, {
+      payload = this.jwtService.verify(data.token, {
         secret: this.configService.get('JWT_SECRET'),
       });
     } catch {
