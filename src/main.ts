@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path'; 
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -19,7 +19,7 @@ async function bootstrap() {
   } else {
     // No PC (Localhost): Relaxa a segurança para facilitar os testes
     app.use(helmet({
-      contentSecurityPolicy: false, 
+      contentSecurityPolicy: false,
       crossOriginResourcePolicy: false,
     }));
   }
@@ -28,9 +28,14 @@ async function bootstrap() {
   // 2. CONFIGURAÇÃO DE CORS
   // ==========================================================
   app.enableCors({
-    // Pega a lista do .env, se não existir, libera para geral '*'
-    origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // Lê o .env, separa por vírgula e remove espaços em branco acidentais
+    origin: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',').map(url => url.trim())
+      : '*',
+    // Adicionado o OPTIONS (vital para preflight requests)
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    // Obrigatório quando o frontend envia tokens de autenticação
+    credentials: true,
   });
 
   // ==========================================================
