@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed": "tsx src/db/seed.ts",
     "db:seed-marketplace": "tsx src/db/seed-marketplace.ts",
+    "db:seed-mega": "tsx src/db/seed-mega.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
