@@ -5,7 +5,6 @@ import * as path from 'path';
 
 @Injectable()
 export class UploadService {
-  // O process.cwd() garante que a pasta 'uploads' fique na raiz do projeto ~/apps/marketplace-api/uploads
   private readonly uploadPath = path.join(process.cwd(), 'uploads');
 
   constructor(private configService: ConfigService) {
@@ -23,7 +22,6 @@ export class UploadService {
     try {
       fs.writeFileSync(fullPath, file.buffer);
       
-      // Busca a APP_URL do seu .env (ex: http://localhost:3000 ou https://api.artonbyte.com.br)
       const baseUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
       return `${baseUrl.replace(/\/$/, '')}/uploads/${fileName}`;
     } catch (error) {
